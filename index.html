@@ -1255,6 +1255,13 @@ function addExtraValor(ei){var inp=document.getElementById('add-ext-'+ei);var v=
 function delExtraValor(ei,v){EXTRAS[ei].valores=EXTRAS[ei].valores.filter(function(x){return x!==v;});save();renderListas();}
 
 // ═══════════════ BITÁCORA ═══════════════
+function colorBit(s){
+  if(!s)return '';
+  s=String(s);
+  s=s.replace(/\+\d+/g,'<span style="color:#0F6E56;font-weight:700;">$&</span>');
+  s=s.replace(/−\d+/g,'<span style="color:#A32D2D;font-weight:700;">$&</span>');
+  return s;
+}
 function renderBitacora(){
   var fTipo=val('bit-f-tipo');
   var eqSel=document.getElementById('bit-f-eq'),prevEq=eqSel.value;
@@ -1280,7 +1287,7 @@ function renderBitacora(){
         '</span>'+
       '</div>'+
       '<div style="font-size:0.76rem;color:var(--tx);margin-top:2px;line-height:1.3;">'+(b.desc||'—')+'</div>'+
-      (b.detalle?'<div style="font-size:0.68rem;color:var(--tx2);margin-top:1px;">'+b.detalle+'</div>':'')+
+      (b.detalle?'<div style="font-size:0.68rem;color:var(--tx2);margin-top:1px;">'+colorBit(b.detalle)+'</div>':'')+
     '</div>';
   }).join('');
 }
