@@ -793,6 +793,11 @@ function confirmarBaja(){
   if(_bajaMotivo==='correccion'){
     logBit('correccion',desc,'Corrección de conteo · −'+q+' uds. ('+antes+' → '+c.stk+')');
   }else if(_bajaMotivo==='cambio'){
+    // Registro de cambio SALIENTE: la camiseta real es la que "se llevó"; lo que devolvió el cliente no se rastrea.
+    CAMB.unshift({tipo:'cambio',
+      devuelta:{externa:true,desc:'Producto fuera del inventario'},
+      llevada:{eq:c.eq,dor:c.dor,col:c.col,ver:c.ver,año:c.año,extras:c.extras||{},tal:c.tal,qty:q},
+      fecha:new Date().toLocaleDateString('es-HN'),salIdx:null});
     logBit('cambio',desc,'Sale por cambio · −'+q+' uds. (producto que se llevó el cliente)');
   }else if(_bajaMotivo==='baja'){
     logBit('baja',desc,'Baja / pérdida · −'+q+' uds. ('+antes+' → '+c.stk+')');
@@ -1267,14 +1272,27 @@ function renderBitacora(){
   cont.innerHTML=lista.slice(0,500).map(function(b){
     var col=colores[String(b.tipo).toLowerCase()]||'#666';
     return '<div style="padding:8px 0;border-bottom:0.5px solid var(--bd);">'+
-      '<div style="display:flex;justify-content:space-between;gap:8px;">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'+
         '<span style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:'+col+';letter-spacing:.4px;">'+b.tipo+'</span>'+
-        '<span style="font-size:0.62rem;color:var(--tx2);white-space:nowrap;">'+b.fecha+(b.hora?' · '+b.hora:'')+'</span>'+
+        '<span style="display:flex;align-items:center;gap:8px;">'+
+          '<span style="font-size:0.62rem;color:var(--tx2);white-space:nowrap;">'+b.fecha+(b.hora?' · '+b.hora:'')+'</span>'+
+          '<button onclick="eliminarBit(\''+esc(String(b.id))+'\')" style="width:24px;height:24px;border:none;border-radius:5px;background:#FCEBEB;color:#A32D2D;font-size:0.72rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Borrar este movimiento">🗑</button>'+
+        '</span>'+
       '</div>'+
       '<div style="font-size:0.76rem;color:var(--tx);margin-top:2px;line-height:1.3;">'+(b.desc||'—')+'</div>'+
       (b.detalle?'<div style="font-size:0.68rem;color:var(--tx2);margin-top:1px;">'+b.detalle+'</div>':'')+
     '</div>';
   }).join('');
+}
+function eliminarBit(id){
+  var b=BITACORA.find(function(x){return String(x.id)===String(id);});
+  if(!b)return;
+  if(!confirm('¿Borrar este movimiento de la bitácora?\n\n'+(b.tipo||'').toUpperCase()+' · '+b.fecha+(b.hora?' '+b.hora:'')+'\n'+(b.desc||'')+(b.detalle?'\n'+b.detalle:'')+'\n\nSolo se borra el registro de la bitácora. No cambia el stock ni las ventas.'))return;
+  BITACORA=BITACORA.filter(function(x){return String(x.id)!==String(id);});
+  window.BITACORA=BITACORA;
+  save();
+  renderBitacora();
+  toast2('✓ Movimiento borrado de la bitácora');
 }
 
 // ═══════════════ OFF LINE export ═══════════════
