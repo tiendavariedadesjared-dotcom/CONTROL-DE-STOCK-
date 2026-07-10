@@ -333,9 +333,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <!-- Modal entrada de producto -->
 <div id="mod-entrada" class="overlay">
   <div class="panel">
-    <div class="p-title">📦 Registrar entrada</div>
+    <div class="p-title">📦 Registrar ingreso de nuevo stock</div>
     <div class="p-sub" id="entrada-sub"></div>
-    <div style="margin-bottom:12px;">
+    <div id="entrada-motivos-wrap" style="margin-bottom:12px;display:none;">
       <div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:6px;">Motivo de la entrada:</div>
       <div id="entrada-motivos" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
     </div>
@@ -343,6 +343,20 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="entrada-nueva-talla" style="margin-bottom:12px;"></div>
     <button class="btn btn-gr" onclick="confirmarEntrada()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar entrada</button>
     <button class="btn btn-outline" onclick="cerrarEntrada()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal subir stock (botón +) -->
+<div id="mod-subir" class="overlay">
+  <div class="panel">
+    <div class="p-title">➕ Subir stock</div>
+    <div class="p-sub" id="subir-sub"></div>
+    <div id="subir-stk" style="font-size:0.78rem;font-weight:700;color:var(--grd);margin-bottom:12px;"></div>
+    <div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:6px;">¿Por qué sube el stock?</div>
+    <div id="subir-motivos" style="margin-bottom:12px;"></div>
+    <div class="fg"><label>¿Cuántas unidades?</label><div style="display:flex;gap:6px;align-items:center;"><button type="button" onclick="bump('subir-qty',-1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button><input type="number" id="subir-qty" min="1" value="1" inputmode="numeric" style="width:70px;text-align:center;"><button type="button" onclick="bump('subir-qty',1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button></div></div>
+    <button class="btn btn-gr" onclick="confirmarSubir()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar</button>
+    <button class="btn btn-outline" onclick="cerrarSubir()">Cancelar</button>
   </div>
 </div>
 
@@ -671,15 +685,16 @@ function renderInv(){
         '<span style="font-size:0.72rem;color:var(--tx2);flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v.ver+'</span>'+
         '<button onclick="abrirBaja('+idx+')" style="width:30px;height:30px;border:0.5px solid var(--bd2);border-radius:6px;background:var(--bg2);font-size:1.1rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Bajar stock">−</button>'+
         '<span data-stk="'+idx+'" style="font-size:0.95rem;font-weight:700;color:'+(ag?'#A32D2D':'#0F6E56')+';min-width:26px;text-align:center;">'+(ag?'0':v.stk)+'</span>'+
+        '<button onclick="abrirSubir('+idx+')" style="width:30px;height:30px;border:0.5px solid #a3d9bf;border-radius:6px;background:#EAF7F1;color:#0F6E56;font-size:1.1rem;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Subir stock (cambio, devolución o corrección)">+</button>'+
         '<button onclick="del('+idx+')" style="width:30px;height:30px;border:none;border-radius:6px;background:#FCEBEB;color:#A32D2D;font-size:0.85rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;">🗑</button>'+
       '</div>';
     }).join('');
 
     var gestHtml='<div id="gest-'+cardId+'" style="display:none;">'+
-      '<div style="font-size:0.64rem;color:#854F0B;background:#FAEEDA;border-radius:5px;padding:5px 8px;margin-bottom:6px;">El botón − corrige el conteo (no se registra). Para sumar producto usá <strong>Registrar entrada</strong>.</div>'+
+      '<div style="font-size:0.64rem;color:#854F0B;background:#FAEEDA;border-radius:5px;padding:5px 8px;margin-bottom:6px;">Con <strong>−</strong> bajás stock (corrección, sale por cambio o baja) y con <strong>+</strong> lo subís (entra por cambio, devolución o corrección). Para mercadería nueva usá <strong>Registrar ingreso de nuevo stock</strong>.</div>'+
       '<button onclick="toggleOffModelo(\''+esc(k)+'\')" style="width:100%;padding:6px;margin-bottom:6px;border:0.5px dashed #A32D2D;border-radius:6px;background:none;color:#A32D2D;font-size:0.68rem;font-weight:600;cursor:pointer;touch-action:manipulation;">⏻ OFF/ON LINE — todo el modelo</button>'+
       filasGest+
-      '<button onclick="abrirEntrada(\''+esc(k)+'\')" style="width:100%;padding:9px;margin-top:8px;border:none;border-radius:var(--rmd);background:var(--gr);color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;">📦 Registrar entrada (ingreso / devolución / cambio)</button>'+
+      '<button onclick="abrirEntrada(\''+esc(k)+'\')" style="width:100%;padding:9px;margin-top:8px;border:none;border-radius:var(--rmd);background:var(--gr);color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;">📦 Registrar ingreso de nuevo stock</button>'+
       '<button onclick="cerrarGest(\''+cardId+'\')" style="width:100%;padding:7px;margin-top:6px;border:none;border-radius:var(--rmd);background:var(--ok-bg);color:var(--ok-tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">✓ Listo</button>'+
     '</div>';
 
@@ -758,6 +773,50 @@ var MOTIVOS_BAJA=[
   {id:'cambio',    lbl:'🔁 Sale por cambio',col:'#5BB8F5',sub:'El cliente se la llevó en un cambio'},
   {id:'baja',      lbl:'⚠️ Baja / pérdida',col:'#C1440E',sub:'Dañada, extraviada, regalada'}
 ];
+// ── SUBIR STOCK con motivo (botón +) ──
+var _subirIdx=-1,_subirMotivo='cambio';
+var MOTIVOS_SUBIR=[
+  {id:'cambio',    lbl:'🔁 Entra por cambio',col:'#5BB8F5',sub:'El cliente trajo esta camiseta en un cambio'},
+  {id:'devolucion',lbl:'↩️ Devolución',      col:'#b03a6e',sub:'El cliente devolvió esta camiseta'},
+  {id:'correccion',lbl:'🔧 Corrección',      col:'#8A8A8A',sub:'El conteo estaba mal (faltaban)'}
+];
+function abrirSubir(i){
+  if(!INV[i])return;
+  _subirIdx=i;_subirMotivo='cambio';
+  var c=INV[i];
+  var ext='';if(c.extras)Object.keys(c.extras).forEach(function(k){if(c.extras[k])ext+=' · '+c.extras[k];});
+  document.getElementById('subir-sub').textContent=c.eq+' | '+c.dor+' · T:'+c.tal+' · '+c.ver+' · '+c.col+ext;
+  document.getElementById('subir-stk').textContent='Stock actual: '+c.stk+' uds.';
+  document.getElementById('subir-qty').value='1';
+  renderMotivosSubir();
+  document.getElementById('mod-subir').classList.add('open');
+}
+function renderMotivosSubir(){
+  document.getElementById('subir-motivos').innerHTML=MOTIVOS_SUBIR.map(function(m){
+    var sel=m.id===_subirMotivo;
+    return '<button onclick="setSubirMotivo(\''+m.id+'\')" style="text-align:left;padding:11px 12px;border-radius:9px;border:1.5px solid '+(sel?m.col:'var(--bd2)')+';background:'+(sel?m.col:'var(--bg2)')+';color:'+(sel?'#fff':'var(--tx)')+';cursor:pointer;touch-action:manipulation;width:100%;margin-bottom:6px;">'+
+      '<div style="font-size:0.82rem;font-weight:700;">'+m.lbl+'</div>'+
+      '<div style="font-size:0.66rem;opacity:'+(sel?'0.9':'0.6')+';margin-top:1px;">'+m.sub+'</div>'+
+    '</button>';
+  }).join('');
+}
+function setSubirMotivo(id){_subirMotivo=id;renderMotivosSubir();}
+function cerrarSubir(){document.getElementById('mod-subir').classList.remove('open');_subirIdx=-1;}
+function confirmarSubir(){
+  var c=INV[_subirIdx];if(!c)return;
+  var q=parseInt(document.getElementById('subir-qty').value)||0;
+  if(q<1){alert('Ingresá una cantidad.');return;}
+  var antes=parseInt(c.stk)||0;
+  c.stk=antes+q;
+  registrarMovTalla(_subirMotivo,c,q,antes);
+  save();
+  cerrarSubir();
+  var abiertos=Object.keys(_openGest).filter(function(k){return _openGest[k];});
+  renderInv();
+  setTimeout(function(){abiertos.forEach(function(cl){var idc=_idByClave[cl];if(idc)abrirGest(idc,cl);});},50);
+  toast2('✓ Stock subido +'+q+' ('+labelSubir(_subirMotivo)+')');
+}
+function labelSubir(id){var m=MOTIVOS_SUBIR.find(function(x){return x.id===id;});return m?m.lbl.replace(/^\S+\s/,''):id;}
 function abrirBaja(i){
   if(!INV[i])return;
   _bajaIdx=i;_bajaMotivo='correccion';
