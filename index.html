@@ -290,7 +290,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="filtros" style="grid-template-columns:1fr 1fr;">
         <select id="bit-f-tipo" onchange="renderBitacora()">
           <option value="">Todos los tipos</option>
-          <option value="ingreso">Ingresos</option>
+          <option value="ingreso">Ingresos (producto nuevo)</option>
+          <option value="mod_suma">Aumentos de stock</option>
           <option value="salida">Ventas (salidas)</option>
           <option value="devolucion">Devoluciones</option>
           <option value="cambio">Cambios</option>
@@ -928,7 +929,7 @@ function confirmarEntrada(){
     var idx=INV.indexOf(v);
     var inp=document.getElementById('ent-'+idx);
     var q=parseInt(inp&&inp.value)||0;
-    if(q>0){var antes=parseInt(v.stk)||0;v.stk=antes+q;totalAdd+=q;cambios.push('T:'+v.tal+' +'+q);registrarMovTalla(_entradaMotivo,v,q,antes);}
+    if(q>0){var antes=parseInt(v.stk)||0;v.stk=antes+q;totalAdd+=q;cambios.push('T:'+v.tal+' +'+q);registrarMovTalla('mod_suma',v,q,antes);}
   });
   // Talla nueva
   var selNew=document.getElementById('ent-new-tal'),qtyNew=document.getElementById('ent-new-qty');
@@ -940,7 +941,7 @@ function confirmarEntrada(){
         fotos:(fotosDeModelo(_entradaClave)||[]).map(function(f){return Object.assign({},f);}),
         soloTienda:!!rep.soloTienda,fechaIngreso:new Date().toLocaleDateString('es-HN')};
       INV.push(nuevo);totalAdd+=nq;cambios.push('T:'+nt+' (nueva) +'+nq);
-      registrarMovTalla(_entradaMotivo,nuevo,nq,0);
+      registrarMovTalla('ingreso',nuevo,nq,0);
     }
   }
   if(!totalAdd){alert('No ingresaste unidades.');return;}
@@ -959,7 +960,9 @@ function registrarMovTalla(motivo,v,q,antes){
   if(motivo==='correccion'){
     logBit('correccion',desc,'Corrección de conteo · +'+q+' uds. ('+antes+' → '+(antes+q)+')');
   }else if(motivo==='ingreso'){
-    logBit('ingreso',desc,'Nuevo ingreso · +'+q+' uds. ('+antes+' → '+(antes+q)+')');
+    logBit('ingreso',desc,'Producto/talla nueva · +'+q+' uds.');
+  }else if(motivo==='mod_suma'){
+    logBit('mod_suma',desc,'Aumento de stock existente · +'+q+' uds. ('+antes+' → '+(antes+q)+')');
   }else if(motivo==='devolucion'){
     // Estructura PLANA: compatible con como la app original lee las devoluciones
     CAMB.unshift({tipo:'devolucion',eq:v.eq,dor:v.dor,col:v.col,ver:v.ver,año:v.año,extras:v.extras||{},tal:v.tal,qty:q,fecha:fecha,salIdx:null});
@@ -1250,22 +1253,34 @@ function nDelFoto(i){var era=_nFotos[i].principal;_nFotos.splice(i,1);if(era&&_n
 function crearProducto(){
   var eq=val('n-eq'),col=val('n-col'),dor=val('n-dor'),ver=val('n-ver'),año=val('n-año');
   var extras={};EXTRAS.forEach(function(ex,ei){var e=document.getElementById('n-ext-'+ei);if(e&&e.value)extras[ex.nombre]=e.value;});
-  var creadas=0,fecha=new Date().toLocaleDateString('es-HN');
+  var creadas=0,aumentadas=0,fecha=new Date().toLocaleDateString('es-HN');
   L.tallas.forEach(function(t){
     var inp=document.getElementById('n-tal-'+t);var q=parseInt(inp&&inp.value)||0;
     if(q>0){
-      INV.push({id:Date.now()+Math.floor(Math.random()*10000),eq:eq,col:col,dor:dor,ver:ver,año:año,tal:t,stk:q,
-        extras:JSON.parse(JSON.stringify(extras)),fotos:_nFotos.map(function(f){return Object.assign({},f);}),
-        soloTienda:false,fechaIngreso:fecha});
-      creadas++;
       var ext='';Object.keys(extras).forEach(function(k){if(extras[k])ext+=' · '+extras[k];});
-      logBit('ingreso',eq+' | '+dor+' | T:'+t+' | '+ver+' | '+col+ext,'Talla nueva · +'+q+' uds.');
+      var desc=eq+' | '+dor+' | T:'+t+' | '+ver+' | '+col+ext;
+      // ¿Ya existe esta variante exacta? Entonces es AUMENTO de stock existente, no producto nuevo.
+      var dup=INV.find(function(c){return c.eq===eq&&c.col===col&&c.dor===dor&&c.ver===ver&&String(c.año)===String(año)&&c.tal===t&&JSON.stringify(c.extras||{})===JSON.stringify(extras);});
+      if(dup){
+        var antes=parseInt(dup.stk)||0;
+        dup.stk=antes+q;
+        if(_nFotos.length&&(!dup.fotos||!dup.fotos.length))dup.fotos=_nFotos.map(function(f){return Object.assign({},f);});
+        aumentadas++;
+        logBit('mod_suma',desc,'Aumento de stock existente · +'+q+' uds. ('+antes+' → '+dup.stk+')');
+      }else{
+        INV.push({id:Date.now()+Math.floor(Math.random()*10000),eq:eq,col:col,dor:dor,ver:ver,año:año,tal:t,stk:q,
+          extras:JSON.parse(JSON.stringify(extras)),fotos:_nFotos.map(function(f){return Object.assign({},f);}),
+          soloTienda:false,fechaIngreso:fecha});
+        creadas++;
+        logBit('ingreso',desc,'Producto/talla nueva · +'+q+' uds.');
+      }
     }
   });
   var msg=document.getElementById('n-msg');
-  if(!creadas){msg.className='msg err';msg.textContent='Ingresá al menos una cantidad por talla.';setTimeout(function(){msg.className='msg';},3000);return;}
+  if(!creadas&&!aumentadas){msg.className='msg err';msg.textContent='Ingresá al menos una cantidad por talla.';setTimeout(function(){msg.className='msg';},3000);return;}
   save();
-  msg.className='msg ok';msg.textContent='✓ Producto creado ('+creadas+' talla'+(creadas!==1?'s':'')+').';
+  var txt=[];if(creadas)txt.push(creadas+' talla'+(creadas!==1?'s':'')+' nueva'+(creadas!==1?'s':''));if(aumentadas)txt.push(aumentadas+' aumentada'+(aumentadas!==1?'s':''));
+  msg.className='msg ok';msg.textContent='✓ Guardado ('+txt.join(' · ')+').';
   setTimeout(function(){msg.className='msg';renderNuevoForm();showTab('inv');},1200);
 }
 
@@ -1338,12 +1353,15 @@ function renderBitacora(){
   });
   var cont=document.getElementById('bit-lista');
   if(!lista.length){cont.innerHTML='<div style="font-size:0.75rem;color:var(--tx2);text-align:center;padding:14px;">Sin movimientos.</div>';return;}
-  var colores={ingreso:'#0F6E56',salida:'#A32D2D',devolucion:'#b03a6e',cambio:'#1a6fa0',correccion:'#8A6A2B',baja:'#C1440E',consignacion:'#7B4F2E',edicion:'#666',eliminacion:'#A32D2D'};
+  var colores={ingreso:'#0F6E56',mod_suma:'#0E7C86',salida:'#A32D2D',devolucion:'#b03a6e',cambio:'#1a6fa0',correccion:'#8A6A2B',baja:'#C1440E',consignacion:'#7B4F2E',edicion:'#666',eliminacion:'#A32D2D'};
+  var etiquetas={ingreso:'PRODUCTO NUEVO',mod_suma:'AUMENTO STOCK',salida:'VENTA',devolucion:'DEVOLUCIÓN',cambio:'CAMBIO',correccion:'CORRECCIÓN',baja:'BAJA',consignacion:'CONSIGNACIÓN',edicion:'EDICIÓN',eliminacion:'ELIMINACIÓN'};
   cont.innerHTML=lista.slice(0,500).map(function(b){
-    var col=colores[String(b.tipo).toLowerCase()]||'#666';
+    var tl=String(b.tipo).toLowerCase();
+    var col=colores[tl]||'#666';
+    var lbl=etiquetas[tl]||b.tipo;
     return '<div style="padding:8px 0;border-bottom:0.5px solid var(--bd);">'+
       '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'+
-        '<span style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:'+col+';letter-spacing:.4px;">'+b.tipo+'</span>'+
+        '<span style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:'+col+';letter-spacing:.4px;">'+lbl+'</span>'+
         '<span style="display:flex;align-items:center;gap:8px;">'+
           '<span style="font-size:0.62rem;color:var(--tx2);white-space:nowrap;">'+b.fecha+(b.hora?' · '+b.hora:'')+'</span>'+
           '<button onclick="eliminarBit(\''+esc(String(b.id))+'\')" style="width:24px;height:24px;border:none;border-radius:5px;background:#FCEBEB;color:#A32D2D;font-size:0.72rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Borrar este movimiento">🗑</button>'+
