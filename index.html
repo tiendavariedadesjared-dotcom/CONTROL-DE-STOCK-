@@ -941,7 +941,7 @@ function confirmarEntrada(){
         fotos:(fotosDeModelo(_entradaClave)||[]).map(function(f){return Object.assign({},f);}),
         soloTienda:!!rep.soloTienda,fechaIngreso:new Date().toLocaleDateString('es-HN')};
       INV.push(nuevo);totalAdd+=nq;cambios.push('T:'+nt+' (nueva) +'+nq);
-      registrarMovTalla('ingreso',nuevo,nq,0);
+      registrarMovTalla('mod_suma',nuevo,nq,0);
     }
   }
   if(!totalAdd){alert('No ingresaste unidades.');return;}
@@ -1254,25 +1254,37 @@ function crearProducto(){
   var eq=val('n-eq'),col=val('n-col'),dor=val('n-dor'),ver=val('n-ver'),año=val('n-año');
   var extras={};EXTRAS.forEach(function(ex,ei){var e=document.getElementById('n-ext-'+ei);if(e&&e.value)extras[ex.nombre]=e.value;});
   var creadas=0,aumentadas=0,fecha=new Date().toLocaleDateString('es-HN');
+  // Clave del modelo (misma agrupación que usa toda la app; ordena extras, evita falsos "nuevos")
+  var claveN=claveModelo({eq:eq,col:col,dor:dor,ver:ver,año:año,extras:extras});
+  // ¿La TARJETA (modelo) ya existía ANTES de esta carga? Si sí, nada de esto es "producto nuevo".
+  var modeloExiste=INV.some(function(c){return claveModelo(c)===claveN;});
   L.tallas.forEach(function(t){
     var inp=document.getElementById('n-tal-'+t);var q=parseInt(inp&&inp.value)||0;
     if(q>0){
       var ext='';Object.keys(extras).forEach(function(k){if(extras[k])ext+=' · '+extras[k];});
       var desc=eq+' | '+dor+' | T:'+t+' | '+ver+' | '+col+ext;
-      // ¿Ya existe esta variante exacta? Entonces es AUMENTO de stock existente, no producto nuevo.
-      var dup=INV.find(function(c){return c.eq===eq&&c.col===col&&c.dor===dor&&c.ver===ver&&String(c.año)===String(año)&&c.tal===t&&JSON.stringify(c.extras||{})===JSON.stringify(extras);});
+      var dup=INV.find(function(c){return claveModelo(c)===claveN&&c.tal===t;});
       if(dup){
+        // Misma talla que ya existía → aumento de stock
         var antes=parseInt(dup.stk)||0;
         dup.stk=antes+q;
         if(_nFotos.length&&(!dup.fotos||!dup.fotos.length))dup.fotos=_nFotos.map(function(f){return Object.assign({},f);});
         aumentadas++;
         logBit('mod_suma',desc,'Aumento de stock existente · +'+q+' uds. ('+antes+' → '+dup.stk+')');
       }else{
+        // Talla que no existía: creamos la variante
         INV.push({id:Date.now()+Math.floor(Math.random()*10000),eq:eq,col:col,dor:dor,ver:ver,año:año,tal:t,stk:q,
           extras:JSON.parse(JSON.stringify(extras)),fotos:_nFotos.map(function(f){return Object.assign({},f);}),
           soloTienda:false,fechaIngreso:fecha});
-        creadas++;
-        logBit('ingreso',desc,'Producto/talla nueva · +'+q+' uds.');
+        if(modeloExiste){
+          // La tarjeta ya existía → es una talla nueva sobre una tarjeta existente = aumento
+          aumentadas++;
+          logBit('mod_suma',desc,'Talla nueva en tarjeta existente · +'+q+' uds.');
+        }else{
+          // Tarjeta totalmente nueva = producto nuevo
+          creadas++;
+          logBit('ingreso',desc,'Producto nuevo · +'+q+' uds.');
+        }
       }
     }
   });
