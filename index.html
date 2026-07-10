@@ -381,7 +381,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="panel">
     <div class="p-title">🛒 Venta</div>
     <div class="p-sub">Confirmá lo que sale. Se descuenta del stock y se registra como salida.</div>
-    <div id="cart-items" style="margin-bottom:12px;"></div>
+    <div id="cart-items" style="margin-bottom:10px;"></div>
+    <div id="cart-total" style="display:none;justify-content:space-between;align-items:center;background:#EAF7F1;border:1px solid #a3d9bf;border-radius:9px;padding:10px 14px;margin-bottom:12px;">
+      <span style="font-size:0.74rem;color:var(--grd);font-weight:600;" id="cart-total-lbl"></span>
+      <span style="font-size:1.05rem;font-weight:800;color:var(--grd);" id="cart-total-val"></span>
+    </div>
     <button class="btn btn-gr" onclick="confirmarVenta()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar venta</button>
     <button class="btn btn-red" onclick="vaciarCarrito()">Vaciar carrito</button>
     <button class="btn btn-outline" onclick="cerrarCarrito()">Seguir agregando</button>
@@ -1102,6 +1106,15 @@ function renderCartItems(){
       detalle+
     '</div>';
   }).join('');
+  // Total de unidades a salir
+  var totBar=document.getElementById('cart-total');
+  if(totBar){
+    var totU=_carrito.reduce(function(s,x){return s+x.qty;},0);
+    var totP=_carrito.length;
+    document.getElementById('cart-total-lbl').textContent='Total a vender · '+totP+' producto'+(totP!==1?'s':'');
+    document.getElementById('cart-total-val').textContent=totU+' uds.';
+    totBar.style.display=_carrito.length?'flex':'none';
+  }
 }
 function cartQty(i,d){
   var it=_carrito[i];if(!it)return;
@@ -1116,6 +1129,10 @@ function cartRemove(i){_carrito.splice(i,1);renderCartItems();renderCartBadge();
 function vaciarCarrito(){if(_carrito.length&&!confirm('¿Vaciar el carrito?'))return;_carrito=[];renderCartItems();renderCartBadge();cerrarCarrito();}
 function confirmarVenta(){
   if(!_carrito.length){alert('El carrito está vacío.');return;}
+  var totU=_carrito.reduce(function(s,x){return s+x.qty;},0);
+  var totP=_carrito.length;
+  var listado=_carrito.map(function(it){return '• '+it.eq+' '+it.dor+' T:'+it.tal+' ×'+it.qty;}).join('\n');
+  if(!confirm('¿Confirmar la venta?\n\n'+listado+'\n\nTotal: '+totU+' unidad'+(totU!==1?'es':'')+' en '+totP+' producto'+(totP!==1?'s':'')+'.\n\nSe descontará del stock.')){return;}
   var fecha=new Date().toLocaleDateString('es-HN');
   _carrito.forEach(function(it){
     var c=INV.find(function(x){return x.id===it.id;})||INV.find(function(x){return x.eq===it.eq&&x.dor===it.dor&&x.tal===it.tal&&x.ver===it.ver&&x.col===it.col&&String(x.año)===String(it.año)&&JSON.stringify(x.extras||{})===JSON.stringify(it.extras||{});});
