@@ -328,7 +328,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div><!-- /wrap -->
 
 <!-- FAB carrito -->
-<button id="cart-fab" onclick="abrirCarrito()">🛒 Venta <span class="badge" id="cart-badge">0</span></button>
+<button id="cart-fab" onclick="abrirCarrito()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.7" fill="#fff" stroke="none"></circle><circle cx="19" cy="21" r="1.7" fill="#fff" stroke="none"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Venta <span class="badge" id="cart-badge">0</span></button>
 
 <!-- Modal entrada de producto -->
 <div id="mod-entrada" class="overlay">
@@ -354,7 +354,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="baja-stk" style="font-size:0.78rem;font-weight:700;color:var(--grd);margin-bottom:12px;"></div>
     <div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:6px;">¿Por qué baja el stock?</div>
     <div id="baja-motivos" style="margin-bottom:12px;"></div>
-    <div class="fg"><label>¿Cuántas unidades?</label><input type="number" id="baja-qty" min="1" value="1" inputmode="numeric" style="width:90px;text-align:center;"></div>
+    <div class="fg"><label>¿Cuántas unidades?</label><div style="display:flex;gap:6px;align-items:center;"><button type="button" onclick="bump('baja-qty',-1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button><input type="number" id="baja-qty" min="1" value="1" inputmode="numeric" style="width:70px;text-align:center;"><button type="button" onclick="bump('baja-qty',1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button></div></div>
     <button class="btn btn-gr" onclick="confirmarBaja()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar</button>
     <button class="btn btn-outline" onclick="cerrarBaja()">Cancelar</button>
   </div>
@@ -658,7 +658,7 @@ function renderInv(){
           '<span style="font-size:1rem;font-weight:700;color:'+(ag?'#A32D2D':'#0F6E56')+';">'+(ag?'Agotado':v.stk)+'</span>'+
           '<span class="cartprev" data-cp="'+v.id+'" style="font-size:0.6rem;font-weight:700;margin-top:1px;display:none;white-space:nowrap;"></span>'+
         '</span>'+
-        (ag?'':'<button onclick="addCarrito('+idx+')" style="width:34px;height:34px;border:none;border-radius:8px;background:var(--gr);color:#fff;font-size:1.05rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Agregar a venta">🛒</button>')+
+        (ag?'':'<button onclick="addCarrito('+idx+')" style="width:36px;height:36px;border:none;border-radius:9px;background:var(--gr);color:#fff;cursor:pointer;flex-shrink:0;touch-action:manipulation;display:flex;align-items:center;justify-content:center;" title="Agregar a venta"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.7" fill="#fff" stroke="none"></circle><circle cx="19" cy="21" r="1.7" fill="#fff" stroke="none"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></button>')+
       '</div>';
     }).join('');
 
@@ -831,10 +831,12 @@ function abrirEntrada(clave){
     '<div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:6px;">Unidades a sumar por talla:</div>'+
     vs.map(function(v){
       var idx=INV.indexOf(v);
-      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--bd);">'+
-        '<span style="font-size:0.85rem;font-weight:700;min-width:44px;">T: '+v.tal+'</span>'+
+      return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:0.5px solid var(--bd);">'+
+        '<span style="font-size:0.85rem;font-weight:700;min-width:40px;">T: '+v.tal+'</span>'+
         '<span style="font-size:0.72rem;color:var(--tx2);flex:1;">stock: '+v.stk+'</span>'+
-        '<input type="number" min="0" value="0" id="ent-'+idx+'" inputmode="numeric" style="width:64px;text-align:center;">'+
+        stepper('ent-'+idx)+
+        '<input type="number" min="0" value="0" id="ent-'+idx+'" inputmode="numeric" style="width:52px;text-align:center;">'+
+        stepperUp('ent-'+idx)+
       '</div>';
     }).join('');
   // Agregar talla nueva
@@ -844,7 +846,9 @@ function abrirEntrada(clave){
     '<div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:5px;border-top:1px dashed var(--bd);padding-top:8px;">➕ Agregar talla nueva:</div>'+
     '<div style="display:flex;gap:6px;align-items:center;">'+
       '<select id="ent-new-tal" style="flex:1;">'+disp.map(function(t){return'<option>'+t+'</option>';}).join('')+'</select>'+
-      '<input type="number" id="ent-new-qty" min="0" value="0" style="width:64px;text-align:center;">'+
+      stepper('ent-new-qty')+
+      '<input type="number" id="ent-new-qty" min="0" value="0" style="width:52px;text-align:center;">'+
+      stepperUp('ent-new-qty')+
     '</div>':'';
   document.getElementById('mod-entrada').classList.add('open');
 }
@@ -1165,7 +1169,7 @@ function renderNuevoForm(){
     return '<div class="fg"><label>'+ex.nombre+'</label><select id="n-ext-'+ei+'"><option value="">—</option>'+ex.valores.map(function(v){return'<option>'+v+'</option>';}).join('')+'</select></div>';
   }).join('')+'</div>':'';
   document.getElementById('n-tallas').innerHTML=L.tallas.map(function(t){
-    return '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.82rem;font-weight:600;min-width:44px;">T: '+t+'</span><input type="number" min="0" value="0" id="n-tal-'+t+'" inputmode="numeric" style="width:70px;text-align:center;"></div>';
+    return '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:0.82rem;font-weight:600;min-width:44px;">T: '+t+'</span>'+stepper('n-tal-'+t)+'<input type="number" min="0" value="0" id="n-tal-'+t+'" inputmode="numeric" style="width:56px;text-align:center;">'+stepperUp('n-tal-'+t)+'</div>';
   }).join('');
   _nFotos=[];renderNFotos();
 }
@@ -1503,6 +1507,22 @@ function cerrarLbox(){document.getElementById('lbox').classList.remove('open');}
 
 // ═══════════════ HELPERS ═══════════════
 function val(id){var e=document.getElementById(id);return e?e.value:'';}
+function bump(id,d){
+  var el=document.getElementById(id);if(!el)return;
+  var v=parseInt(el.value);if(isNaN(v))v=0;
+  v+=d;
+  var mn=el.getAttribute('min');mn=(mn===null||mn==='')?0:parseInt(mn);
+  if(v<mn)v=mn;
+  var mx=el.getAttribute('max');
+  if(mx!==null&&mx!==''&&v>parseInt(mx))v=parseInt(mx);
+  el.value=v;
+}
+function stepper(id){
+  return '<button type="button" onclick="bump(\''+id+'\',-1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>';
+}
+function stepperUp(id){
+  return '<button type="button" onclick="bump(\''+id+'\',1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button>';
+}
 function esc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 function toast2(txt){var t=document.getElementById('toast');t.textContent=txt;t.style.display='block';clearTimeout(window._tt2);window._tt2=setTimeout(function(){t.style.display='none';t.textContent='☁️ Sincronizado';},2000);}
 
