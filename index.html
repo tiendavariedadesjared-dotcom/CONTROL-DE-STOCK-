@@ -319,6 +319,16 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
 
     <div class="card">
+      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Correcciones de conteo físico</div>
+      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Importá el archivo <strong>.json</strong> que genera tu herramienta de conteo. Primero vas a <strong>revisar</strong> los cambios y nada se aplica hasta que confirmes.</div>
+      <label class="btn btn-outline" style="cursor:pointer;">
+        <svg viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><polyline points="12 12 12 21"/><polyline points="8 17 12 21 16 17"/></svg>Importar correcciones de conteo
+        <input type="file" id="file-correcciones" accept=".json,application/json" style="display:none;" onchange="importarCorrecciones(event)">
+      </label>
+      <div id="corr-msg" class="msg"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Productos OFF LINE</div>
       <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Exportá la lista de tallas marcadas como OFF LINE (ocultas del catálogo de clientes).</div>
       <button class="btn btn-outline" onclick="exportarOffline()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar OFF LINE (.txt)</button>
@@ -344,6 +354,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="entrada-nueva-talla" style="margin-bottom:12px;"></div>
     <button class="btn btn-gr" onclick="confirmarEntrada()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar entrada</button>
     <button class="btn btn-outline" onclick="cerrarEntrada()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal revisión de correcciones de conteo -->
+<div id="mod-correcciones" class="overlay">
+  <div class="panel">
+    <div class="p-title">📋 Revisión de correcciones</div>
+    <div class="p-sub" id="corr-rev-sub">Revisá los cambios antes de aplicar. No se guarda nada hasta que confirmes.</div>
+    <div id="corr-totales" style="margin-bottom:12px;"></div>
+    <div id="corr-tabla" style="margin-bottom:10px;"></div>
+    <div id="corr-noenc" style="margin-bottom:10px;"></div>
+    <button class="btn btn-gr" onclick="aplicarCorrecciones()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Aplicar correcciones</button>
+    <button class="btn btn-outline" onclick="cerrarCorrecciones()">Cancelar</button>
   </div>
 </div>
 
@@ -1352,6 +1375,29 @@ function colorBit(s){
   s=s.replace(/−\d+/g,'<span style="color:#A32D2D;font-weight:700;">$&</span>');
   return s;
 }
+function fotosDeBit(b){
+  var d=String(b.desc||'');var parts=d.split(' | ');
+  if(parts.length<5)return [];
+  var eq=parts[0].trim(),dor=parts[1].trim();
+  var talPart=parts[2].trim();var tal=talPart.indexOf('T:')===0?talPart.slice(2).trim():talPart;
+  var ver=parts[3].trim();
+  var seg=parts[4].split(' · ').map(function(s){return s.trim();});
+  var col=seg[0];
+  var evKey=seg.slice(1).filter(Boolean).sort().join('§'); // valores de extras (Manga, Categoría, etc.)
+  // candidatos por campos base
+  var cands=INV.filter(function(c){return c.eq===eq&&c.dor===dor&&String(c.tal)===tal&&c.ver===ver&&c.col===col;});
+  if(!cands.length)cands=INV.filter(function(c){return c.eq===eq&&c.dor===dor&&c.ver===ver&&c.col===col;});
+  if(!cands.length)cands=INV.filter(function(c){return c.eq===eq&&c.dor===dor&&c.col===col;});
+  if(!cands.length)return [];
+  // preferir el que coincide EXACTO en los valores de extras (distingue Manga corta/larga, etc.)
+  var best=cands.find(function(c){
+    var vals=c.extras?Object.keys(c.extras).map(function(k){return String(c.extras[k]);}).filter(Boolean).sort().join('§'):'';
+    return vals===evKey;
+  });
+  if(!best&&evKey)return []; // hay extras en el registro pero ningún modelo coincide → mejor sin foto que una equivocada
+  var prod=best||cands[0];
+  return fotosDeModelo(claveModelo(prod))||[];
+}
 function renderBitacora(){
   var fTipo=val('bit-f-tipo');
   var eqSel=document.getElementById('bit-f-eq'),prevEq=eqSel.value;
@@ -1371,16 +1417,24 @@ function renderBitacora(){
     var tl=String(b.tipo).toLowerCase();
     var col=colores[tl]||'#666';
     var lbl=etiquetas[tl]||b.tipo;
-    return '<div style="padding:8px 0;border-bottom:0.5px solid var(--bd);">'+
-      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'+
-        '<span style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:'+col+';letter-spacing:.4px;">'+lbl+'</span>'+
-        '<span style="display:flex;align-items:center;gap:8px;">'+
-          '<span style="font-size:0.62rem;color:var(--tx2);white-space:nowrap;">'+b.fecha+(b.hora?' · '+b.hora:'')+'</span>'+
-          '<button onclick="eliminarBit(\''+esc(String(b.id))+'\')" style="width:24px;height:24px;border:none;border-radius:5px;background:#FCEBEB;color:#A32D2D;font-size:0.72rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Borrar este movimiento">🗑</button>'+
-        '</span>'+
+    var fotos=fotosDeBit(b);
+    var portada=fotos.find(function(f){return f.principal;})||fotos[0];
+    var thumb=portada
+      ? '<img src="'+portada.url+'" onclick="abrirLbox('+esc(JSON.stringify(fotos.map(function(f){return f.url;})))+',0)" onerror="this.style.opacity=0.25" style="width:42px;height:42px;border-radius:7px;object-fit:cover;flex-shrink:0;cursor:pointer;border:1px solid var(--bd);">'
+      : '<div style="width:42px;height:42px;border-radius:7px;background:var(--bg2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;">👕</div>';
+    return '<div style="display:flex;gap:9px;padding:8px 0;border-bottom:0.5px solid var(--bd);">'+
+      thumb+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">'+
+          '<span style="font-size:0.6rem;font-weight:800;text-transform:uppercase;color:'+col+';letter-spacing:.4px;">'+lbl+'</span>'+
+          '<span style="display:flex;align-items:center;gap:8px;">'+
+            '<span style="font-size:0.62rem;color:var(--tx2);white-space:nowrap;">'+b.fecha+(b.hora?' · '+b.hora:'')+'</span>'+
+            '<button onclick="eliminarBit(\''+esc(String(b.id))+'\')" style="width:24px;height:24px;border:none;border-radius:5px;background:#FCEBEB;color:#A32D2D;font-size:0.72rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Borrar este movimiento">🗑</button>'+
+          '</span>'+
+        '</div>'+
+        '<div style="font-size:0.76rem;color:var(--tx);margin-top:2px;line-height:1.3;">'+(b.desc||'—')+'</div>'+
+        (b.detalle?'<div style="font-size:0.68rem;color:var(--tx2);margin-top:1px;">'+colorBit(b.detalle)+'</div>':'')+
       '</div>'+
-      '<div style="font-size:0.76rem;color:var(--tx);margin-top:2px;line-height:1.3;">'+(b.desc||'—')+'</div>'+
-      (b.detalle?'<div style="font-size:0.68rem;color:var(--tx2);margin-top:1px;">'+colorBit(b.detalle)+'</div>':'')+
     '</div>';
   }).join('');
 }
@@ -1475,6 +1529,152 @@ function importarBackup(e){
   };
   reader.readAsText(file);
 }
+
+// ═══════════════ CORRECCIONES DE CONTEO FÍSICO ═══════════════
+var _corrPreview=null;
+function extrasIguales(a,b){
+  a=a||{};b=b||{};var ka=Object.keys(a),kb=Object.keys(b);
+  if(ka.length!==kb.length)return false;
+  return ka.every(function(k){return String(a[k])===String(b[k]);});
+}
+function buscarItemCorr(c){
+  // 1) por id (comparado como string)
+  var byId=INV.find(function(x){return String(x.id)===String(c.id);});
+  if(byId)return byId;
+  // 2) por coincidencia exacta de eq+dor+tal+ver+col+año+extras (robusto al orden de extras)
+  return INV.find(function(x){
+    return x.eq===c.eq && String(x.dor||'')===String(c.dor||'') && String(x.tal)===String(c.tal) &&
+           x.ver===c.ver && x.col===c.col && String(x.año)===String(c.año) && extrasIguales(x.extras,c.extras);
+  })||null;
+}
+function importarCorrecciones(e){
+  var file=e.target.files[0];if(!file)return;
+  var m=document.getElementById('corr-msg');
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var data;
+    try{data=JSON.parse(String(ev.target.result).trim());}
+    catch(err){m.className='msg err';m.textContent='El archivo no es un JSON válido.';e.target.value='';return;}
+    if(!data||data.tipo!=='correccion_inventario_conteo_fisico'){
+      m.className='msg err';m.textContent='Ese archivo no es de correcciones de conteo físico.';e.target.value='';return;
+    }
+    var corrs=Array.isArray(data.correcciones)?data.correcciones:[];
+    if(!corrs.length){m.className='msg err';m.textContent='El archivo no tiene correcciones.';e.target.value='';return;}
+    _corrPreview=corrs.map(function(c){
+      var item=buscarItemCorr(c);
+      var actual=item?(parseInt(item.stk)||0):null;
+      var nuevo=parseInt(c.nuevo_stk);if(isNaN(nuevo))nuevo=(actual==null?0:actual);
+      var sistema=(c.stk_sistema==null||c.stk_sistema==='')?null:parseInt(c.stk_sistema);
+      return {corr:c,item:item,found:!!item,actual:actual,nuevo:nuevo,sistema:sistema};
+    });
+    e.target.value='';m.className='msg';m.textContent='';
+    renderRevisionCorrecciones();
+    document.getElementById('mod-correcciones').classList.add('open');
+  };
+  reader.readAsText(file);
+}
+function renderRevisionCorrecciones(){
+  var pv=_corrPreview||[];
+  var found=pv.filter(function(p){return p.found;});
+  var noenc=pv.filter(function(p){return !p.found;});
+  var cambian=found.filter(function(p){return p.actual!==p.nuevo;});
+  var coinciden=found.filter(function(p){return p.actual===p.nuevo;});
+  var warns=found.filter(function(p){return p.sistema!=null&&p.actual!==p.sistema;});
+  var sumaActual=found.reduce(function(s,p){return s+(p.actual||0);},0);
+  var sumaNuevo=found.reduce(function(s,p){return s+(p.nuevo||0);},0);
+
+  // Totales
+  function chip(lbl,val,col){return '<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;text-align:center;"><div style="font-size:1.05rem;font-weight:800;color:'+(col||'var(--tx)')+';">'+val+'</div><div style="font-size:0.6rem;color:var(--tx2);">'+lbl+'</div></div>';}
+  document.getElementById('corr-totales').innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px;">'+
+      chip('en el archivo',pv.length)+
+      chip('cambian',cambian.length,'#0F6E56')+
+      chip('ya coinciden',coinciden.length,'#666')+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">'+
+      chip('no encontradas',noenc.length,noenc.length?'#A32D2D':'#666')+
+      chip('con ⚠ aviso',warns.length,warns.length?'#C1440E':'#666')+
+      chip('stock: '+sumaActual+' → '+sumaNuevo,(sumaNuevo-sumaActual>=0?'+':'')+(sumaNuevo-sumaActual),(sumaNuevo-sumaActual)===0?'#666':(sumaNuevo-sumaActual>0?'#0F6E56':'#A32D2D'))+
+    '</div>';
+
+  // Tabla agrupada por tarjeta (claveModelo)
+  var grupos={},orden=[];
+  found.forEach(function(p){var k=claveModelo(p.item);if(!grupos[k]){grupos[k]=[];orden.push(k);}grupos[k].push(p);});
+  var html=orden.map(function(k){
+    var reps=grupos[k];var rep=reps[0].item;
+    var ext='';if(rep.extras)Object.keys(rep.extras).forEach(function(kk){if(rep.extras[kk])ext+=' · '+rep.extras[kk];});
+    reps.sort(function(a,b){var ia=TALLA_ORDEN.indexOf(String(a.item.tal).toUpperCase()),ib=TALLA_ORDEN.indexOf(String(b.item.tal).toUpperCase());return (ia<0?99:ia)-(ib<0?99:ib);});
+    var filas=reps.map(function(p){
+      var cambia=p.actual!==p.nuevo;
+      var warn=p.sistema!=null&&p.actual!==p.sistema;
+      var delta=p.nuevo-p.actual;
+      var bg=cambia?'background:#FBF6E7;':'';
+      return '<tr style="'+bg+'">'+
+        '<td style="padding:5px 6px;font-weight:700;border-bottom:0.5px solid var(--bd);">'+p.item.tal+(warn?' <span title="El stock cambió desde el conteo" style="color:#C1440E;">⚠</span>':'')+'</td>'+
+        '<td style="padding:5px 6px;text-align:center;border-bottom:0.5px solid var(--bd);">'+p.actual+'</td>'+
+        '<td style="padding:5px 6px;text-align:center;color:var(--tx2);border-bottom:0.5px solid var(--bd);">'+(p.sistema==null?'—':p.sistema)+'</td>'+
+        '<td style="padding:5px 6px;text-align:center;font-weight:800;color:#0F6E56;border-bottom:0.5px solid var(--bd);">'+p.nuevo+'</td>'+
+        '<td style="padding:5px 6px;text-align:center;font-weight:700;color:'+(delta===0?'#999':(delta>0?'#0F6E56':'#A32D2D'))+';border-bottom:0.5px solid var(--bd);">'+(delta>0?'+':'')+delta+'</td>'+
+      '</tr>';
+    }).join('');
+    return '<div style="border:0.5px solid var(--bd);border-radius:9px;overflow:hidden;margin-bottom:8px;">'+
+      '<div style="background:var(--bg2);padding:8px 10px;">'+
+        '<div style="font-size:0.8rem;font-weight:700;">'+rep.eq+' · '+rep.dor+'</div>'+
+        '<div style="font-size:0.66rem;color:var(--tx2);">'+rep.ver+' · '+rep.col+' · '+rep.año+ext+'</div>'+
+      '</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'+
+        '<thead><tr style="color:var(--tx2);font-size:0.6rem;text-transform:uppercase;">'+
+          '<th style="padding:4px 6px;text-align:left;">Talla</th>'+
+          '<th style="padding:4px 6px;">App</th>'+
+          '<th style="padding:4px 6px;">Conteo</th>'+
+          '<th style="padding:4px 6px;">Nuevo</th>'+
+          '<th style="padding:4px 6px;">Cambio</th>'+
+        '</tr></thead><tbody>'+filas+'</tbody>'+
+      '</table>'+
+    '</div>';
+  }).join('');
+  document.getElementById('corr-tabla').innerHTML=html||'<div style="font-size:0.78rem;color:var(--tx2);text-align:center;padding:10px;">No hay coincidencias que revisar.</div>';
+  // Columnas leyenda
+  document.getElementById('corr-tabla').insertAdjacentHTML('afterbegin','<div style="font-size:0.62rem;color:var(--tx2);margin-bottom:6px;line-height:1.4;">Columnas: <strong>App</strong> = stock actual ahora · <strong>Conteo</strong> = lo que vio la herramienta · <strong>Nuevo</strong> = valor final · <strong>Cambio</strong> = diferencia a aplicar. ⚠ = el stock cambió desde el conteo.</div>');
+
+  // No encontradas
+  var ne=document.getElementById('corr-noenc');
+  if(noenc.length){
+    ne.innerHTML='<div style="border:1px solid #f0b5b5;border-radius:9px;overflow:hidden;">'+
+      '<div style="background:#FCEBEB;color:#A32D2D;padding:7px 10px;font-size:0.72rem;font-weight:700;">No encontradas ('+noenc.length+') — no se creará nada</div>'+
+      noenc.map(function(p){var c=p.corr;var ext='';if(c.extras)Object.keys(c.extras).forEach(function(kk){if(c.extras[kk])ext+=' · '+c.extras[kk];});
+        return '<div style="padding:6px 10px;font-size:0.7rem;border-top:0.5px solid #f5d5d5;">'+(c.eq||'?')+' · '+(c.dor||'')+' · T:'+(c.tal||'?')+' · '+(c.ver||'')+' · '+(c.col||'')+' · '+(c.año||'')+ext+' <span style="color:var(--tx2);">(nuevo: '+c.nuevo_stk+')</span></div>';
+      }).join('')+
+    '</div>';
+  }else{ne.innerHTML='';}
+}
+function aplicarCorrecciones(){
+  var pv=_corrPreview||[];
+  var found=pv.filter(function(p){return p.found;});
+  var cambian=found.filter(function(p){return p.actual!==p.nuevo;});
+  if(!cambian.length){alert('No hay cambios de stock para aplicar.');return;}
+  if(!confirm('Se van a aplicar '+cambian.length+' cambio(s) de stock (valor absoluto del conteo).\n\n¿Confirmás?'))return;
+  var aplicadas=0;
+  cambian.forEach(function(p){
+    var item=p.item;var antes=parseInt(item.stk)||0;var nuevo=p.nuevo;
+    if(antes!==nuevo){
+      item.stk=nuevo;
+      var ext='';if(item.extras)Object.keys(item.extras).forEach(function(k){if(item.extras[k])ext+=' · '+item.extras[k];});
+      var desc=item.eq+' | '+item.dor+' | T:'+item.tal+' | '+item.ver+' | '+item.col+ext;
+      var delta=nuevo-antes;
+      logBit('correccion',desc,'Conteo físico · '+antes+' → '+nuevo+' ('+(delta>0?'+':'')+delta+')');
+      aplicadas++;
+    }
+  });
+  save();
+  var noenc=pv.filter(function(p){return !p.found;});
+  cerrarCorrecciones();
+  renderInv();
+  var msg='✓ '+aplicadas+' corrección(es) aplicada(s) al stock.';
+  if(noenc.length){msg+='\n\n⚠ '+noenc.length+' no encontrada(s) (no se tocaron):\n'+noenc.slice(0,15).map(function(p){return '• '+(p.corr.eq||'?')+' '+(p.corr.dor||'')+' T:'+(p.corr.tal||'?');}).join('\n');}
+  alert(msg);
+}
+function cerrarCorrecciones(){document.getElementById('mod-correcciones').classList.remove('open');_corrPreview=null;}
 
 // ═══════════════ CONSIGNACIÓN ═══════════════
 var _consigItems=[],_liquidarIdx=-1;
