@@ -1754,22 +1754,31 @@ function renderRevisionDuplicados(){
   }
   btn.style.display='';
   var totalElim=grupos.reduce(function(s,g){return s+(g.length-1);},0);
-  document.getElementById('dup-sub').textContent=grupos.length+' modelo/talla duplicado(s) · se eliminarán '+totalElim+' copia(s) sumando su stock.';
+  document.getElementById('dup-sub').textContent=grupos.length+' modelo/talla repetido(s). Revisá si son realmente el mismo producto antes de juntar.';
+  function extrasTxt(c){var o=c.extras||{};var ks=Object.keys(o);if(!ks.length)return '(sin extras)';return ks.map(function(k){return k+': '+o[k];}).join(' · ');}
   cont.innerHTML=grupos.map(function(g){
     var prim=elegirPrimario(g);
     var total=g.reduce(function(s,c){return s+(parseInt(c.stk)||0);},0);
     var rep=g[0];var ext='';if(rep.extras)Object.keys(rep.extras).forEach(function(k){if(rep.extras[k])ext+=' · '+rep.extras[k];});
+    // ¿En qué difieren los campos que la comparación ignora?
+    var difs=[];
+    if(new Set(g.map(function(c){return !!c.soloTienda;})).size>1)difs.push('OFF LINE distinto');
+    if(new Set(g.map(function(c){return c.fechaIngreso||'';})).size>1)difs.push('fecha de ingreso distinta');
+    if(new Set(g.map(function(c){return (c.fotos&&c.fotos.length)?'sí':'no';})).size>1)difs.push('unos tienen foto y otros no');
+    var difTxt=difs.length?('<div style="font-size:0.66rem;color:#854F0B;background:#FAEEDA;padding:5px 10px;">Se diferencian en: '+difs.join(' · ')+'. Si para vos eso los hace distintos, NO los juntes y avisame.</div>'):'<div style="font-size:0.66rem;color:var(--tx2);padding:5px 10px;">Coinciden en todos los datos del producto; solo difieren en el stock.</div>';
     var filas=g.map(function(c){
       var esP=c===prim;
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;font-size:0.7rem;'+(esP?'background:#EAF7F1;':'')+'border-top:0.5px solid var(--bd);">'+
-        '<span style="color:var(--tx2);">id '+c.id+(c.fotos&&c.fotos.length?' 📷':'')+(c.soloTienda?' 🔴':'')+' '+(esP?'<strong style="color:#0F6E56;">se queda</strong>':'<span style="color:#A32D2D;">se elimina</span>')+'</span>'+
-        '<span style="font-weight:700;">stock '+(parseInt(c.stk)||0)+'</span>'+
+      return '<div style="padding:6px 10px;font-size:0.68rem;'+(esP?'background:#EAF7F1;':'')+'border-top:0.5px solid var(--bd);line-height:1.5;">'+
+        '<div style="display:flex;justify-content:space-between;"><span style="color:var(--tx2);">id '+c.id+'</span><span style="font-weight:700;">stock '+(parseInt(c.stk)||0)+' '+(esP?'<span style="color:#0F6E56;">· se queda</span>':'<span style="color:#A32D2D;">· se elimina</span>')+'</span></div>'+
+        '<div style="color:var(--tx2);">'+(c.soloTienda?'🔴 OFF LINE':'🟢 en línea')+' · '+((c.fotos&&c.fotos.length)?('📷 '+c.fotos.length):'sin foto')+(c.fechaIngreso?' · ingresó '+c.fechaIngreso:'')+'</div>'+
+        '<div style="color:var(--tx2);">'+extrasTxt(c)+'</div>'+
       '</div>';
     }).join('');
     return '<div style="border:0.5px solid var(--bd);border-radius:9px;overflow:hidden;margin-bottom:8px;">'+
       '<div style="background:var(--bg2);padding:8px 10px;"><div style="font-size:0.8rem;font-weight:700;">'+rep.eq+' · '+rep.dor+' · T:'+rep.tal+'</div><div style="font-size:0.66rem;color:var(--tx2);">'+rep.ver+' · '+rep.col+' · '+rep.año+ext+'</div></div>'+
+      difTxt+
       filas+
-      '<div style="padding:6px 10px;font-size:0.72rem;font-weight:700;color:#0F6E56;border-top:0.5px solid var(--bd);">→ Quedará 1 tarjeta con stock '+total+'</div>'+
+      '<div style="padding:6px 10px;font-size:0.72rem;font-weight:700;color:#0F6E56;border-top:0.5px solid var(--bd);">→ Si los juntás: 1 tarjeta con stock '+total+'</div>'+
     '</div>';
   }).join('');
 }
