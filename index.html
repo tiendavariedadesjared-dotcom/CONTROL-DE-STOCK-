@@ -329,6 +329,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
 
     <div class="card">
+      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>Limpiar duplicados</div>
+      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Junta tarjetas repetidas (mismo modelo y talla) en una sola, sumando su stock y borrando la copia. Vas a <strong>revisar</strong> antes de aplicar. Hacé un respaldo primero.</div>
+      <button class="btn btn-outline" onclick="buscarDuplicados()"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar duplicados</button>
+    </div>
+
+    <div class="card">
       <div class="card-title"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Productos OFF LINE</div>
       <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Exportá la lista de tallas marcadas como OFF LINE (ocultas del catálogo de clientes).</div>
       <button class="btn btn-outline" onclick="exportarOffline()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar OFF LINE (.txt)</button>
@@ -354,6 +360,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="entrada-nueva-talla" style="margin-bottom:12px;"></div>
     <button class="btn btn-gr" onclick="confirmarEntrada()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar entrada</button>
     <button class="btn btn-outline" onclick="cerrarEntrada()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal revisión de duplicados -->
+<div id="mod-duplicados" class="overlay">
+  <div class="panel">
+    <div class="p-title">🧹 Juntar duplicados</div>
+    <div class="p-sub" id="dup-sub">Revisá antes de aplicar. Nada se guarda hasta que confirmes.</div>
+    <div style="font-size:0.64rem;color:#854F0B;background:#FAEEDA;border-radius:7px;padding:7px 10px;margin-bottom:10px;line-height:1.4;">Se conserva la tarjeta con foto/stock y se suma el stock de las copias. El stock total no cambia. Conviene tener un respaldo hecho.</div>
+    <div id="dup-tabla" style="margin-bottom:10px;"></div>
+    <button class="btn btn-gr" id="dup-aplicar" onclick="aplicarJuntarDuplicados()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Juntar duplicados</button>
+    <button class="btn btn-outline" onclick="cerrarDuplicados()">Cancelar</button>
   </div>
 </div>
 
@@ -1567,11 +1585,34 @@ function importarCorrecciones(e){
       var sistema=(c.stk_sistema==null||c.stk_sistema==='')?null:parseInt(c.stk_sistema);
       return {corr:c,item:item,found:!!item,actual:actual,nuevo:nuevo,sistema:sistema};
     });
+    dedupCorrPreview();
     e.target.value='';m.className='msg';m.textContent='';
     renderRevisionCorrecciones();
     document.getElementById('mod-correcciones').classList.add('open');
   };
   reader.readAsText(file);
+}
+var _corrCombinadas=0;
+function dedupCorrPreview(){
+  _corrCombinadas=0;
+  var vistos={},deduped=[];
+  (_corrPreview||[]).forEach(function(p){
+    if(!p.found){deduped.push(p);return;}
+    var key=String(p.item.id);
+    if(!vistos[key]){vistos[key]=p;p.dup=1;deduped.push(p);}
+    else{
+      var prev=vistos[key];prev.dup=(prev.dup||1)+1;_corrCombinadas++;
+      // Preferir la corrección "real" (cuyo stk_sistema coincide con el stock actual)
+      if(prev.sistema!==prev.actual&&p.sistema===p.actual){prev.nuevo=p.nuevo;prev.sistema=p.sistema;prev.corr=p.corr;}
+      if(p.nuevo!==prev.nuevo)prev.conflicto=true;
+    }
+  });
+  _corrPreview=deduped;
+}
+function invVariantesDuplicadas(){
+  var seen={},dups=0;
+  INV.forEach(function(c){var k=claveModelo(c)+'§'+c.tal;if(seen[k])dups++;else seen[k]=1;});
+  return dups;
 }
 function renderRevisionCorrecciones(){
   var pv=_corrPreview||[];
@@ -1634,8 +1675,16 @@ function renderRevisionCorrecciones(){
     '</div>';
   }).join('');
   document.getElementById('corr-tabla').innerHTML=html||'<div style="font-size:0.78rem;color:var(--tx2);text-align:center;padding:10px;">No hay coincidencias que revisar.</div>';
-  // Columnas leyenda
-  document.getElementById('corr-tabla').insertAdjacentHTML('afterbegin','<div style="font-size:0.62rem;color:var(--tx2);margin-bottom:6px;line-height:1.4;">Columnas: <strong>App</strong> = stock actual ahora · <strong>Conteo</strong> = lo que vio la herramienta · <strong>Nuevo</strong> = valor final · <strong>Cambio</strong> = diferencia a aplicar. ⚠ = el stock cambió desde el conteo.</div>');
+  // Avisos de duplicados
+  var avisos='';
+  if(_corrCombinadas>0){
+    avisos+='<div style="font-size:0.66rem;background:#FAEEDA;color:#854F0B;border-radius:7px;padding:7px 10px;margin-bottom:6px;line-height:1.4;">🔎 Se combinaron <strong>'+_corrCombinadas+'</strong> corrección(es) repetida(s) que apuntaban a la misma variante (por eso antes veías tallas dos veces). Se dejó una sola por variante.</div>';
+  }
+  var invDup=invVariantesDuplicadas();
+  if(invDup>0){
+    avisos+='<div style="font-size:0.66rem;background:#FCEBEB;color:#A32D2D;border-radius:7px;padding:7px 10px;margin-bottom:6px;line-height:1.4;">⚠ Tu inventario tiene <strong>'+invDup+'</strong> variante(s) duplicada(s) (mismo modelo y talla repetidos). Conviene juntarlas para evitar confusiones. Avisame y te armo una limpieza segura.</div>';
+  }
+  document.getElementById('corr-tabla').insertAdjacentHTML('afterbegin',avisos+'<div style="font-size:0.62rem;color:var(--tx2);margin-bottom:6px;line-height:1.4;">Columnas: <strong>App</strong> = stock actual ahora · <strong>Conteo</strong> = lo que vio la herramienta · <strong>Nuevo</strong> = valor final · <strong>Cambio</strong> = diferencia a aplicar. ⚠ = el stock cambió desde el conteo.</div>');
 
   // No encontradas
   var ne=document.getElementById('corr-noenc');
@@ -1675,6 +1724,81 @@ function aplicarCorrecciones(){
   alert(msg);
 }
 function cerrarCorrecciones(){document.getElementById('mod-correcciones').classList.remove('open');_corrPreview=null;}
+
+// ═══════════════ JUNTAR DUPLICADOS ═══════════════
+function gruposDuplicados(){
+  var map={};
+  INV.forEach(function(c){var k=claveModelo(c)+'§'+c.tal;if(!map[k])map[k]=[];map[k].push(c);});
+  return Object.keys(map).map(function(k){return map[k];}).filter(function(g){return g.length>1;});
+}
+function elegirPrimario(g){
+  var conFoto=g.filter(function(c){return c.fotos&&c.fotos.length;});
+  var pool=conFoto.length?conFoto:g;
+  return pool.slice().sort(function(a,b){
+    var sa=parseInt(a.stk)||0,sb=parseInt(b.stk)||0;
+    if(sb!==sa)return sb-sa;
+    return (parseInt(a.id)||0)-(parseInt(b.id)||0);
+  })[0];
+}
+function buscarDuplicados(){renderRevisionDuplicados();document.getElementById('mod-duplicados').classList.add('open');}
+function cerrarDuplicados(){document.getElementById('mod-duplicados').classList.remove('open');}
+function renderRevisionDuplicados(){
+  var grupos=gruposDuplicados();
+  var cont=document.getElementById('dup-tabla');
+  var btn=document.getElementById('dup-aplicar');
+  if(!grupos.length){
+    cont.innerHTML='<div style="font-size:0.82rem;color:var(--tx2);text-align:center;padding:16px;">🎉 No hay duplicados. Tu inventario está limpio.</div>';
+    btn.style.display='none';
+    document.getElementById('dup-sub').textContent='';
+    return;
+  }
+  btn.style.display='';
+  var totalElim=grupos.reduce(function(s,g){return s+(g.length-1);},0);
+  document.getElementById('dup-sub').textContent=grupos.length+' modelo/talla duplicado(s) · se eliminarán '+totalElim+' copia(s) sumando su stock.';
+  cont.innerHTML=grupos.map(function(g){
+    var prim=elegirPrimario(g);
+    var total=g.reduce(function(s,c){return s+(parseInt(c.stk)||0);},0);
+    var rep=g[0];var ext='';if(rep.extras)Object.keys(rep.extras).forEach(function(k){if(rep.extras[k])ext+=' · '+rep.extras[k];});
+    var filas=g.map(function(c){
+      var esP=c===prim;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;font-size:0.7rem;'+(esP?'background:#EAF7F1;':'')+'border-top:0.5px solid var(--bd);">'+
+        '<span style="color:var(--tx2);">id '+c.id+(c.fotos&&c.fotos.length?' 📷':'')+(c.soloTienda?' 🔴':'')+' '+(esP?'<strong style="color:#0F6E56;">se queda</strong>':'<span style="color:#A32D2D;">se elimina</span>')+'</span>'+
+        '<span style="font-weight:700;">stock '+(parseInt(c.stk)||0)+'</span>'+
+      '</div>';
+    }).join('');
+    return '<div style="border:0.5px solid var(--bd);border-radius:9px;overflow:hidden;margin-bottom:8px;">'+
+      '<div style="background:var(--bg2);padding:8px 10px;"><div style="font-size:0.8rem;font-weight:700;">'+rep.eq+' · '+rep.dor+' · T:'+rep.tal+'</div><div style="font-size:0.66rem;color:var(--tx2);">'+rep.ver+' · '+rep.col+' · '+rep.año+ext+'</div></div>'+
+      filas+
+      '<div style="padding:6px 10px;font-size:0.72rem;font-weight:700;color:#0F6E56;border-top:0.5px solid var(--bd);">→ Quedará 1 tarjeta con stock '+total+'</div>'+
+    '</div>';
+  }).join('');
+}
+function aplicarJuntarDuplicados(){
+  var grupos=gruposDuplicados();
+  if(!grupos.length){alert('No hay duplicados que juntar.');return;}
+  var totalElim=grupos.reduce(function(s,g){return s+(g.length-1);},0);
+  if(!confirm('Se juntarán '+grupos.length+' grupo(s) de duplicados y se eliminarán '+totalElim+' copia(s).\nEl stock se suma (el total no cambia).\n\n¿Confirmás?'))return;
+  var juntados=0,eliminados=0;
+  grupos.forEach(function(g){
+    var prim=elegirPrimario(g);
+    var total=g.reduce(function(s,c){return s+(parseInt(c.stk)||0);},0);
+    if((!prim.fotos||!prim.fotos.length)){
+      var conF=g.find(function(c){return c.fotos&&c.fotos.length;});
+      if(conF)prim.fotos=conF.fotos.map(function(f){return Object.assign({},f);});
+    }
+    if(g.some(function(c){return c.soloTienda;}))prim.soloTienda=prim.soloTienda; // conserva estado del primario
+    prim.stk=total;
+    var ext='';if(prim.extras)Object.keys(prim.extras).forEach(function(k){if(prim.extras[k])ext+=' · '+prim.extras[k];});
+    var desc=prim.eq+' | '+prim.dor+' | T:'+prim.tal+' | '+prim.ver+' | '+prim.col+ext;
+    logBit('edicion',desc,'Duplicados juntados · '+g.length+' tarjetas → 1 · stock total '+total);
+    g.forEach(function(c){if(c!==prim){var i=INV.indexOf(c);if(i>=0){INV.splice(i,1);eliminados++;}}});
+    juntados++;
+  });
+  save();
+  cerrarDuplicados();
+  renderInv();
+  alert('✓ '+juntados+' grupo(s) juntado(s), '+eliminados+' duplicado(s) eliminado(s).\nEl stock total se conservó.');
+}
 
 // ═══════════════ CONSIGNACIÓN ═══════════════
 var _consigItems=[],_liquidarIdx=-1;
