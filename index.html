@@ -715,15 +715,15 @@ function renderInv(){
         '<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:0.68rem;color:var(--grd);font-weight:700;">Total del ingreso</span><span id="itot-val-'+cardId+'" style="font-size:0.95rem;font-weight:800;color:var(--grd);">0</span></div>'+
         '<div id="itot-des-'+cardId+'" style="font-size:0.62rem;color:#0a5c3f;margin-top:3px;line-height:1.5;"></div>'+
       '</div>'+
+      '<button id="iconf-'+cardId+'" onclick="confirmarIngresoInline(\''+cardId+'\',\''+esc(k)+'\')" style="display:none;width:100%;padding:11px;margin-top:8px;border:none;border-radius:var(--rmd);background:var(--gr);color:#fff;font-size:0.85rem;font-weight:700;cursor:pointer;touch-action:manipulation;">✓ Confirmar ingreso</button>'+
       '<button id="ibtn-'+cardId+'" onclick="toggleIngreso(\''+cardId+'\',\''+esc(k)+'\')" style="width:100%;padding:9px;margin-top:8px;border:none;border-radius:var(--rmd);background:var(--gr);color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;">📦 Registrar ingreso de nuevo stock</button>'+
-      '<button id="iconf-'+cardId+'" onclick="confirmarIngresoInline(\''+cardId+'\',\''+esc(k)+'\')" style="display:none;width:100%;padding:9px;margin-top:6px;border:none;border-radius:var(--rmd);background:#1A1A1A;color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;">✓ Confirmar ingreso</button>'+
-      '<button onclick="cerrarGest(\''+cardId+'\')" style="width:100%;padding:7px;margin-top:6px;border:none;border-radius:var(--rmd);background:var(--ok-bg);color:var(--ok-tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">✓ Listo</button>'+
+      '<button id="ilisto-'+cardId+'" onclick="cerrarGest(\''+cardId+'\')" style="width:100%;padding:7px;margin-top:6px;border:none;border-radius:var(--rmd);background:var(--ok-bg);color:var(--ok-tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">✓ Listo</button>'+
     '</div>';
 
     // Barra acciones
     var barra='<div style="display:flex;gap:6px;margin-top:8px;">'+
-      '<button id="btn-gest-'+cardId+'" onclick="toggleGest(\''+cardId+'\',\''+esc(k)+'\')" style="flex:1;padding:9px;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--bg2);color:var(--tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">⚙️ Gestionar</button>'+
-      '<button onclick="abrirEdit(\''+esc(k)+'\')" style="flex:1;padding:9px;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--bg2);color:var(--tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">✏️ Editar</button>'+
+      '<button id="btn-gest-'+cardId+'" onclick="toggleGest(\''+cardId+'\',\''+esc(k)+'\')" style="flex:1;padding:9px;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--bg2);color:var(--tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">⚙️ Gestionar stock</button>'+
+      '<button onclick="abrirEdit(\''+esc(k)+'\')" style="flex:1;padding:9px;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--bg2);color:var(--tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">✏️ Editar tarjeta</button>'+
       '<button onclick="abrirFotos(\''+esc(k)+'\')" style="flex:1;padding:9px;border:0.5px solid var(--bd2);border-radius:var(--rmd);background:var(--bg2);color:var(--tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">📷 Fotos</button>'+
     '</div>';
 
@@ -760,7 +760,7 @@ function cerrarGest(cardId){
   var g=document.getElementById('gest-'+cardId),l=document.getElementById('lect-'+cardId),b=document.getElementById('btn-gest-'+cardId);
   if(!g||!l)return;
   g.style.display='none';l.style.display='';
-  if(b){b.style.background='var(--bg2)';b.style.color='var(--tx)';b.textContent='⚙️ Gestionar';}
+  if(b){b.style.background='var(--bg2)';b.style.color='var(--tx)';b.textContent='⚙️ Gestionar stock';}
   _openGest[_claveById[cardId]]=false;
 }
 
@@ -904,7 +904,18 @@ var _acum={},_acumNueva={},_iCard=null,_iClave=null;
 
 function toggleIngreso(cardId,clave){
   var activo=_iCard===cardId;
-  if(activo){salirIngreso(cardId);return;}
+  if(activo){
+    // Si hay algo acumulado o escrito, avisar antes de descartar
+    var pend=0;
+    Object.keys(_acum).forEach(function(k){pend+=_acum[k]||0;});
+    Object.keys(_acumNueva).forEach(function(k){pend+=_acumNueva[k]||0;});
+    INV.filter(function(c){return claveModelo(c)===clave;}).forEach(function(v){
+      var e=document.getElementById('ient-'+INV.indexOf(v));pend+=parseInt(e&&e.value)||0;
+    });
+    var qn=document.getElementById('inew-qty');pend+=parseInt(qn&&qn.value)||0;
+    if(pend>0&&!confirm('Vas a cancelar el ingreso y se descartarán '+pend+' unidad(es) que ya sumaste.\n\n¿Cancelar de todos modos?'))return;
+    salirIngreso(cardId);return;
+  }
   _iCard=cardId;_iClave=clave;_acum={};_acumNueva={};
   var vs=INV.filter(function(c){return claveModelo(c)===clave;});
   vs.forEach(function(v){
@@ -934,8 +945,9 @@ function toggleIngreso(cardId,clave){
     cont.style.display='block';
   }
   var b=document.getElementById('ibtn-'+cardId);
-  if(b){b.textContent='✕ Salir del ingreso';b.style.background='var(--bg2)';b.style.color='var(--tx)';}
+  if(b){b.textContent='Cancelar';b.style.background='var(--bg2)';b.style.color='var(--tx2)';b.style.fontWeight='600';b.style.fontSize='0.75rem';b.style.padding='7px';}
   var cf=document.getElementById('iconf-'+cardId);if(cf)cf.style.display='block';
+  var lo=document.getElementById('ilisto-'+cardId);if(lo)lo.style.display='none';
   totalIngreso();
 }
 function salirIngreso(cardId){
@@ -954,8 +966,9 @@ function salirIngreso(cardId){
   var cont=document.getElementById('inew-'+cardId);if(cont){cont.style.display='none';cont.innerHTML='';}
   var tot=document.getElementById('itot-'+cardId);if(tot)tot.style.display='none';
   var b=document.getElementById('ibtn-'+cardId);
-  if(b){b.textContent='📦 Registrar ingreso de nuevo stock';b.style.background='var(--gr)';b.style.color='#fff';}
+  if(b){b.textContent='📦 Registrar ingreso de nuevo stock';b.style.background='var(--gr)';b.style.color='#fff';b.style.fontWeight='700';b.style.fontSize='0.8rem';b.style.padding='9px';}
   var cf=document.getElementById('iconf-'+cardId);if(cf)cf.style.display='none';
+  var lo=document.getElementById('ilisto-'+cardId);if(lo)lo.style.display='block';
   _iCard=null;_iClave=null;_acum={};_acumNueva={};
 }
 function ibump(idx,d){
@@ -1124,7 +1137,7 @@ function abrirEdit(clave){
     return '<div class="fg"><label>'+ex.nombre+'</label><select id="em-ext-'+ei+'"><option value="">—</option>'+ex.valores.map(function(v){return'<option'+(v===val?' selected':'')+'>'+v+'</option>';}).join('')+'</select></div>';
   }).join('');
   document.getElementById('edit-body').innerHTML=
-    '<div class="p-title">✏️ Editar modelo</div>'+
+    '<div class="p-title">✏️ Editar tarjeta</div>'+
     '<div class="p-sub">Los cambios se aplican a <strong>todas las tallas</strong>. El stock y las marcas OFF LINE no se tocan.</div>'+
     '<div class="form-row"><div class="fg"><label>Equipo</label><select id="em-eq">'+op(L.equipos,rep.eq)+'</select></div><div class="fg"><label>Color</label><select id="em-col">'+op(L.colores,rep.col)+'</select></div></div>'+
     '<div class="form-row"><div class="fg"><label>Dorsal / Jugador</label><select id="em-dor">'+op(L.dorsales,rep.dor)+'</select></div><div class="fg"><label>Versión</label><select id="em-ver">'+op(L.versiones,rep.ver)+'</select></div></div>'+
