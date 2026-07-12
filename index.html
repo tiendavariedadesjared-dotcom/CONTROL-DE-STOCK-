@@ -348,53 +348,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <button id="cart-fab" onclick="abrirCarrito()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1.7" fill="#fff" stroke="none"></circle><circle cx="19" cy="21" r="1.7" fill="#fff" stroke="none"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Venta <span class="badge" id="cart-badge">0</span></button>
 
 <!-- Modal entrada de producto -->
-<div id="mod-entrada" class="overlay">
-  <div class="panel">
-    <div class="p-title">📦 Registrar ingreso de nuevo stock</div>
-    <div class="p-sub" id="entrada-sub"></div>
-    <div id="entrada-motivos-wrap" style="margin-bottom:12px;display:none;">
-      <div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:6px;">Motivo de la entrada:</div>
-      <div id="entrada-motivos" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
-    </div>
-    <div id="entrada-tallas" style="margin-bottom:12px;"></div>
-    <div id="entrada-nueva-talla" style="margin-bottom:12px;"></div>
-    <div id="entrada-total" style="display:none;background:#EAF7F1;border:1px solid #a3d9bf;border-radius:9px;padding:10px 12px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:0.74rem;color:var(--grd);font-weight:700;">TOTAL acumulado del ingreso</span>
-        <span style="font-size:1.15rem;font-weight:800;color:var(--grd);" id="entrada-total-val">0 uds.</span>
-      </div>
-      <div id="entrada-total-desglose" style="font-size:0.66rem;color:#0a5c3f;margin-top:5px;line-height:1.5;"></div>
-    </div>
-    <button class="btn btn-gr" onclick="confirmarEntrada()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar entrada</button>
-    <button class="btn btn-outline" onclick="cerrarEntrada()">Cancelar</button>
-  </div>
-</div>
-
-<!-- Modal revisión de duplicados -->
-<div id="mod-duplicados" class="overlay">
-  <div class="panel">
-    <div class="p-title">🧹 Juntar duplicados</div>
-    <div class="p-sub" id="dup-sub">Revisá antes de aplicar. Nada se guarda hasta que confirmes.</div>
-    <div style="font-size:0.64rem;color:#854F0B;background:#FAEEDA;border-radius:7px;padding:7px 10px;margin-bottom:10px;line-height:1.4;">Se conserva la tarjeta con foto/stock y se suma el stock de las copias. El stock total no cambia. Conviene tener un respaldo hecho.</div>
-    <div id="dup-tabla" style="margin-bottom:10px;"></div>
-    <button class="btn btn-gr" id="dup-aplicar" onclick="aplicarJuntarDuplicados()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Juntar duplicados</button>
-    <button class="btn btn-outline" onclick="cerrarDuplicados()">Cancelar</button>
-  </div>
-</div>
-
-<!-- Modal revisión de correcciones de conteo -->
-<div id="mod-correcciones" class="overlay">
-  <div class="panel">
-    <div class="p-title">📋 Revisión de correcciones</div>
-    <div class="p-sub" id="corr-rev-sub">Revisá los cambios antes de aplicar. No se guarda nada hasta que confirmes.</div>
-    <div id="corr-totales" style="margin-bottom:12px;"></div>
-    <div id="corr-tabla" style="margin-bottom:10px;"></div>
-    <div id="corr-noenc" style="margin-bottom:10px;"></div>
-    <button class="btn btn-gr" onclick="aplicarCorrecciones()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Aplicar correcciones</button>
-    <button class="btn btn-outline" onclick="cerrarCorrecciones()">Cancelar</button>
-  </div>
-</div>
-
 <!-- Modal subir stock (botón +) -->
 <div id="mod-subir" class="overlay">
   <div class="panel">
@@ -728,22 +681,42 @@ function renderInv(){
     // Filas GESTIÓN
     var filasGest=vs.map(function(v){
       var idx=INV.indexOf(v),ag=(parseInt(v.stk)||0)===0,off=!!v.soloTienda;
-      return '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:0.5px solid var(--bd);">'+
-        '<span style="font-size:0.85rem;font-weight:700;color:var(--tx);min-width:34px;">'+v.tal+'</span>'+
-        '<button id="off-'+idx+'" onclick="toggleOff('+idx+')" style="font-size:0.55rem;font-weight:800;padding:4px 7px;border-radius:5px;border:none;cursor:pointer;background:'+(off?'#A32D2D':'#0F6E56')+';color:#fff;flex-shrink:0;touch-action:manipulation;">'+(off?'OFF':'ON')+'</button>'+
-        '<span style="font-size:0.72rem;color:var(--tx2);flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v.ver+'</span>'+
-        '<button onclick="abrirBaja('+idx+')" style="width:30px;height:30px;border:0.5px solid var(--bd2);border-radius:6px;background:var(--bg2);font-size:1.1rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Bajar stock">−</button>'+
-        '<span data-stk="'+idx+'" style="font-size:0.95rem;font-weight:700;color:'+(ag?'#A32D2D':'#0F6E56')+';min-width:26px;text-align:center;">'+(ag?'0':v.stk)+'</span>'+
-        '<button onclick="abrirSubir('+idx+')" style="width:30px;height:30px;border:0.5px solid #a3d9bf;border-radius:6px;background:#EAF7F1;color:#0F6E56;font-size:1.1rem;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Subir stock (cambio, devolución o corrección)">+</button>'+
-        '<button onclick="del('+idx+')" style="width:30px;height:30px;border:none;border-radius:6px;background:#FCEBEB;color:#A32D2D;font-size:0.85rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;">🗑</button>'+
+      return '<div style="border-bottom:0.5px solid var(--bd);">'+
+        // Fila normal (gestión)
+        '<div id="gnorm-'+idx+'" style="display:flex;align-items:center;gap:6px;padding:7px 0;">'+
+          '<span style="font-size:0.85rem;font-weight:700;color:var(--tx);min-width:34px;">'+v.tal+'</span>'+
+          '<button id="off-'+idx+'" onclick="toggleOff('+idx+')" style="font-size:0.55rem;font-weight:800;padding:4px 7px;border-radius:5px;border:none;cursor:pointer;background:'+(off?'#A32D2D':'#0F6E56')+';color:#fff;flex-shrink:0;touch-action:manipulation;">'+(off?'OFF':'ON')+'</button>'+
+          '<span style="font-size:0.72rem;color:var(--tx2);flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+v.ver+'</span>'+
+          '<button onclick="abrirBaja('+idx+')" style="width:30px;height:30px;border:0.5px solid var(--bd2);border-radius:6px;background:var(--bg2);font-size:1.1rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Bajar stock">−</button>'+
+          '<span data-stk="'+idx+'" style="font-size:0.95rem;font-weight:700;color:'+(ag?'#A32D2D':'#0F6E56')+';min-width:26px;text-align:center;">'+(ag?'0':v.stk)+'</span>'+
+          '<button onclick="abrirSubir('+idx+')" style="width:30px;height:30px;border:0.5px solid #a3d9bf;border-radius:6px;background:#EAF7F1;color:#0F6E56;font-size:1.1rem;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;" title="Subir stock (cambio, devolución o corrección)">+</button>'+
+          '<button onclick="del('+idx+')" style="width:30px;height:30px;border:none;border-radius:6px;background:#FCEBEB;color:#A32D2D;font-size:0.85rem;cursor:pointer;flex-shrink:0;touch-action:manipulation;">🗑</button>'+
+        '</div>'+
+        // Fila modo INGRESO (inline, oculta por defecto)
+        '<div id="ging-'+idx+'" style="display:none;align-items:center;gap:5px;padding:7px 0;">'+
+          '<span style="font-size:0.85rem;font-weight:700;min-width:34px;">'+v.tal+'</span>'+
+          '<span style="font-size:0.72rem;color:var(--tx2);min-width:52px;">'+v.stk+' <span data-ifin="'+idx+'" style="color:#0F6E56;font-weight:700;"></span></span>'+
+          '<span data-iac="'+idx+'" style="font-size:0.78rem;font-weight:800;color:#999;min-width:30px;text-align:center;background:var(--bg2);border-radius:5px;padding:2px 0;">0</span>'+
+          '<button type="button" onclick="ibump('+idx+',-1)" style="width:28px;height:30px;border:0.5px solid var(--bd2);border-radius:6px;background:var(--bg2);font-size:1.05rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>'+
+          '<input type="number" min="0" value="0" id="ient-'+idx+'" inputmode="numeric" oninput="totalIngreso()" style="width:42px;height:30px;text-align:center;font-size:0.9rem;font-weight:800;color:#0F6E56;padding:2px;">'+
+          '<button type="button" onclick="ibump('+idx+',1)" style="width:30px;height:30px;border:none;border-radius:6px;background:var(--gr);color:#fff;font-size:1.15rem;line-height:1;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button>'+
+          '<button type="button" id="iapl-'+idx+'" onclick="sumarLote('+idx+')" style="flex:1;height:30px;border:none;border-radius:6px;background:#1A1A1A;color:#fff;font-size:0.68rem;font-weight:700;cursor:pointer;touch-action:manipulation;opacity:0.3;" disabled>Sumar</button>'+
+        '</div>'+
       '</div>';
     }).join('');
 
     var gestHtml='<div id="gest-'+cardId+'" style="display:none;">'+
-      '<div style="font-size:0.64rem;color:#854F0B;background:#FAEEDA;border-radius:5px;padding:5px 8px;margin-bottom:6px;">Con <strong>−</strong> bajás stock (corrección, sale por cambio o baja) y con <strong>+</strong> lo subís (entra por cambio, devolución o corrección). Para mercadería nueva usá <strong>Registrar ingreso de nuevo stock</strong>.</div>'+
-      '<button onclick="toggleOffModelo(\''+esc(k)+'\')" style="width:100%;padding:6px;margin-bottom:6px;border:0.5px dashed #A32D2D;border-radius:6px;background:none;color:#A32D2D;font-size:0.68rem;font-weight:600;cursor:pointer;touch-action:manipulation;">⏻ OFF/ON LINE — todo el modelo</button>'+
+      '<div id="ghelp-'+cardId+'" style="font-size:0.64rem;color:#854F0B;background:#FAEEDA;border-radius:5px;padding:5px 8px;margin-bottom:6px;">Con <strong>−</strong> bajás stock (corrección, sale por cambio o baja) y con <strong>+</strong> lo subís (entra por cambio, devolución o corrección). Para mercadería nueva usá <strong>Registrar ingreso</strong>.</div>'+
+      '<div id="ihelp-'+cardId+'" style="display:none;font-size:0.64rem;color:#0a5c3f;background:#EAF7F1;border-radius:5px;padding:5px 8px;margin-bottom:6px;">Poné el paquete que contaste y tocá <strong>Sumar</strong>. Podés volver a la misma talla las veces que quieras.</div>'+
+      '<button id="goff-'+cardId+'" onclick="toggleOffModelo(\''+esc(k)+'\')" style="width:100%;padding:6px;margin-bottom:6px;border:0.5px dashed #A32D2D;border-radius:6px;background:none;color:#A32D2D;font-size:0.68rem;font-weight:600;cursor:pointer;touch-action:manipulation;">⏻ OFF/ON LINE — todo el modelo</button>'+
       filasGest+
-      '<button onclick="abrirEntrada(\''+esc(k)+'\')" style="width:100%;padding:9px;margin-top:8px;border:none;border-radius:var(--rmd);background:var(--gr);color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;">📦 Registrar ingreso de nuevo stock</button>'+
+      '<div id="inew-'+cardId+'" style="display:none;margin-top:7px;"></div>'+
+      '<div id="itot-'+cardId+'" style="display:none;background:#EAF7F1;border:1px solid #a3d9bf;border-radius:8px;padding:7px 10px;margin-top:8px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:0.68rem;color:var(--grd);font-weight:700;">Total del ingreso</span><span id="itot-val-'+cardId+'" style="font-size:0.95rem;font-weight:800;color:var(--grd);">0</span></div>'+
+        '<div id="itot-des-'+cardId+'" style="font-size:0.62rem;color:#0a5c3f;margin-top:3px;line-height:1.5;"></div>'+
+      '</div>'+
+      '<button id="ibtn-'+cardId+'" onclick="toggleIngreso(\''+cardId+'\',\''+esc(k)+'\')" style="width:100%;padding:9px;margin-top:8px;border:none;border-radius:var(--rmd);background:var(--gr);color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;">📦 Registrar ingreso de nuevo stock</button>'+
+      '<button id="iconf-'+cardId+'" onclick="confirmarIngresoInline(\''+cardId+'\',\''+esc(k)+'\')" style="display:none;width:100%;padding:9px;margin-top:6px;border:none;border-radius:var(--rmd);background:#1A1A1A;color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;">✓ Confirmar ingreso</button>'+
       '<button onclick="cerrarGest(\''+cardId+'\')" style="width:100%;padding:7px;margin-top:6px;border:none;border-radius:var(--rmd);background:var(--ok-bg);color:var(--ok-tx);font-size:0.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">✓ Listo</button>'+
     '</div>';
 
@@ -927,135 +900,141 @@ var MOTIVOS=[
   {id:'cambio',    lbl:'🔁 Entra por cambio',col:'#5BB8F5'},
   {id:'correccion',lbl:'🔧 Corrección',    col:'#8A8A8A'}
 ];
-function abrirEntrada(clave){
-  _entradaClave=clave;_entradaMotivo='ingreso';
-  _acum={};_acumNueva={};
+var _acum={},_acumNueva={},_iCard=null,_iClave=null;
+
+function toggleIngreso(cardId,clave){
+  var activo=_iCard===cardId;
+  if(activo){salirIngreso(cardId);return;}
+  _iCard=cardId;_iClave=clave;_acum={};_acumNueva={};
   var vs=INV.filter(function(c){return claveModelo(c)===clave;});
-  if(!vs.length)return;
-  var rep=vs[0];
-  document.getElementById('entrada-sub').textContent=rep.eq+' | '+rep.dor+' · '+rep.ver+' · '+rep.col+' · '+rep.año;
-  renderMotivos();
-  vs.sort(function(a,b){var ia=TALLA_ORDEN.indexOf(String(a.tal).toUpperCase()),ib=TALLA_ORDEN.indexOf(String(b.tal).toUpperCase());return (ia<0?99:ia)-(ib<0?99:ib);});
-  document.getElementById('entrada-tallas').innerHTML=
-    '<div style="font-size:0.68rem;color:var(--tx2);margin-bottom:8px;line-height:1.4;">Contá el paquete que tenés en la mano, poné la cantidad y tocá <strong>Sumar</strong>. Se agrega al acumulado de esa talla y podés volver más tarde con otro paquete.</div>'+
-    vs.map(function(v){
-      var idx=INV.indexOf(v);
-      return '<div id="fila-ent-'+idx+'" style="background:var(--bg2);border-radius:9px;padding:9px 10px;margin-bottom:7px;">'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">'+
-          '<span style="font-size:0.92rem;font-weight:800;">T: '+v.tal+'</span>'+
-          '<span style="font-size:0.68rem;color:var(--tx2);">acumulado: <strong data-acum="'+idx+'" style="color:#0F6E56;font-size:1rem;">0</strong> <span style="opacity:.7;">(stock '+v.stk+' → <span data-fin="'+idx+'">'+v.stk+'</span>)</span></span>'+
-        '</div>'+
-        '<div style="display:flex;align-items:center;gap:6px;">'+
-          '<button type="button" onclick="bump(\'ent-'+idx+'\',-1)" style="width:38px;height:42px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg);font-size:1.35rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>'+
-          '<input type="number" min="0" value="0" id="ent-'+idx+'" inputmode="numeric" oninput="totalEntrada()" onchange="totalEntrada()" style="width:60px;height:42px;text-align:center;font-size:1.15rem;font-weight:800;color:#0F6E56;">'+
-          '<button type="button" onclick="bump(\'ent-'+idx+'\',1)" style="width:46px;height:42px;border:none;border-radius:8px;background:var(--gr);color:#fff;font-size:1.45rem;line-height:1;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button>'+
-          '<button type="button" id="apl-'+idx+'" onclick="sumarLote('+idx+')" style="flex:1;height:42px;border:none;border-radius:8px;background:#1A1A1A;color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;opacity:0.3;" disabled>Sumar</button>'+
-        '</div>'+
-      '</div>';
-    }).join('');
-  // Agregar talla nueva
+  vs.forEach(function(v){
+    var idx=INV.indexOf(v);
+    var n=document.getElementById('gnorm-'+idx),g=document.getElementById('ging-'+idx);
+    if(n)n.style.display='none';
+    if(g)g.style.display='flex';
+    var inp=document.getElementById('ient-'+idx);if(inp)inp.value='0';
+  });
+  var hp=document.getElementById('ghelp-'+cardId);if(hp)hp.style.display='none';
+  var hi=document.getElementById('ihelp-'+cardId);if(hi)hi.style.display='block';
+  var off=document.getElementById('goff-'+cardId);if(off)off.style.display='none';
+  // Selector de talla nueva (compacto)
   var existentes=vs.map(function(v){return v.tal;});
   var disp=L.tallas.filter(function(t){return existentes.indexOf(t)<0;});
-  document.getElementById('entrada-nueva-talla').innerHTML=disp.length?
-    '<div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:5px;border-top:1px dashed var(--bd);padding-top:8px;">➕ Agregar talla nueva:</div>'+
-    '<div style="display:flex;gap:6px;align-items:center;">'+
-      '<select id="ent-new-tal" onchange="totalEntrada()" style="flex:1;height:42px;">'+disp.map(function(t){return'<option>'+t+'</option>';}).join('')+'</select>'+
-      '<button type="button" onclick="bump(\'ent-new-qty\',-1)" style="width:38px;height:42px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg);font-size:1.35rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>'+
-      '<input type="number" id="ent-new-qty" min="0" value="0" inputmode="numeric" oninput="totalEntrada()" onchange="totalEntrada()" style="width:58px;height:42px;text-align:center;font-size:1.1rem;font-weight:800;color:#0F6E56;">'+
-      '<button type="button" onclick="bump(\'ent-new-qty\',1)" style="width:44px;height:42px;border:none;border-radius:8px;background:var(--gr);color:#fff;font-size:1.4rem;line-height:1;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button>'+
-      '<button type="button" id="apl-new" onclick="sumarLoteNueva()" style="height:42px;padding:0 12px;border:none;border-radius:8px;background:#1A1A1A;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;touch-action:manipulation;opacity:0.3;" disabled>Sumar</button>'+
-    '</div>':'';
-  document.getElementById('mod-entrada').classList.add('open');
-  totalEntrada();
+  var cont=document.getElementById('inew-'+cardId);
+  if(cont){
+    cont.innerHTML=disp.length?
+      '<div style="display:flex;align-items:center;gap:5px;border-top:1px dashed var(--bd);padding-top:7px;">'+
+        '<select id="inew-tal" style="width:70px;height:30px;font-size:0.72rem;padding:2px 18px 2px 6px;">'+disp.map(function(t){return'<option>'+t+'</option>';}).join('')+'</select>'+
+        '<span style="font-size:0.62rem;color:var(--tx2);flex:1;">talla nueva</span>'+
+        '<button type="button" onclick="ibumpNew(-1)" style="width:28px;height:30px;border:0.5px solid var(--bd2);border-radius:6px;background:var(--bg2);font-size:1.05rem;line-height:1;cursor:pointer;">−</button>'+
+        '<input type="number" id="inew-qty" min="0" value="0" inputmode="numeric" oninput="totalIngreso()" style="width:42px;height:30px;text-align:center;font-size:0.9rem;font-weight:800;color:#0F6E56;padding:2px;">'+
+        '<button type="button" onclick="ibumpNew(1)" style="width:30px;height:30px;border:none;border-radius:6px;background:var(--gr);color:#fff;font-size:1.15rem;line-height:1;font-weight:700;cursor:pointer;">+</button>'+
+        '<button type="button" id="iapl-new" onclick="sumarLoteNueva()" style="width:64px;height:30px;border:none;border-radius:6px;background:#1A1A1A;color:#fff;font-size:0.68rem;font-weight:700;cursor:pointer;opacity:0.3;" disabled>Sumar</button>'+
+      '</div>':'';
+    cont.style.display='block';
+  }
+  var b=document.getElementById('ibtn-'+cardId);
+  if(b){b.textContent='✕ Salir del ingreso';b.style.background='var(--bg2)';b.style.color='var(--tx)';}
+  var cf=document.getElementById('iconf-'+cardId);if(cf)cf.style.display='block';
+  totalIngreso();
 }
-var _acum={},_acumNueva={};
+function salirIngreso(cardId){
+  var clave=_iClave;
+  if(clave){
+    INV.filter(function(c){return claveModelo(c)===clave;}).forEach(function(v){
+      var idx=INV.indexOf(v);
+      var n=document.getElementById('gnorm-'+idx),g=document.getElementById('ging-'+idx);
+      if(n)n.style.display='flex';
+      if(g)g.style.display='none';
+    });
+  }
+  var hp=document.getElementById('ghelp-'+cardId);if(hp)hp.style.display='block';
+  var hi=document.getElementById('ihelp-'+cardId);if(hi)hi.style.display='none';
+  var off=document.getElementById('goff-'+cardId);if(off)off.style.display='block';
+  var cont=document.getElementById('inew-'+cardId);if(cont){cont.style.display='none';cont.innerHTML='';}
+  var tot=document.getElementById('itot-'+cardId);if(tot)tot.style.display='none';
+  var b=document.getElementById('ibtn-'+cardId);
+  if(b){b.textContent='📦 Registrar ingreso de nuevo stock';b.style.background='var(--gr)';b.style.color='#fff';}
+  var cf=document.getElementById('iconf-'+cardId);if(cf)cf.style.display='none';
+  _iCard=null;_iClave=null;_acum={};_acumNueva={};
+}
+function ibump(idx,d){
+  var el=document.getElementById('ient-'+idx);if(!el)return;
+  var v=parseInt(el.value);if(isNaN(v))v=0;
+  v+=d;if(v<0)v=0;
+  el.value=v;totalIngreso();
+}
+function ibumpNew(d){
+  var el=document.getElementById('inew-qty');if(!el)return;
+  var v=parseInt(el.value);if(isNaN(v))v=0;
+  v+=d;if(v<0)v=0;
+  el.value=v;totalIngreso();
+}
 function sumarLote(idx){
-  var inp=document.getElementById('ent-'+idx);
+  var inp=document.getElementById('ient-'+idx);
   var q=parseInt(inp&&inp.value)||0;
   if(q<1)return;
   _acum[idx]=(_acum[idx]||0)+q;
   inp.value='0';
-  totalEntrada();
-  var fila=document.getElementById('fila-ent-'+idx);
-  if(fila){fila.style.transition='background .25s';fila.style.background='#D6F2E4';setTimeout(function(){fila.style.background='var(--bg2)';},350);}
+  totalIngreso();
+  var g=document.getElementById('ging-'+idx);
+  if(g){g.style.transition='background .25s';g.style.background='#D6F2E4';setTimeout(function(){g.style.background='';},350);}
 }
 function sumarLoteNueva(){
-  var sel=document.getElementById('ent-new-tal'),inp=document.getElementById('ent-new-qty');
+  var sel=document.getElementById('inew-tal'),inp=document.getElementById('inew-qty');
   if(!sel||!inp)return;
   var t=sel.value,q=parseInt(inp.value)||0;
   if(!t||q<1)return;
   _acumNueva[t]=(_acumNueva[t]||0)+q;
   inp.value='0';
-  totalEntrada();
+  totalIngreso();
 }
-function quitarAcum(idx){_acum[idx]=0;totalEntrada();}
-function quitarAcumNueva(t){delete _acumNueva[t];totalEntrada();}
-function totalEntrada(){
-  if(!_entradaClave)return;
-  var vs=INV.filter(function(c){return claveModelo(c)===_entradaClave;});
+function quitarAcum(idx){_acum[idx]=0;totalIngreso();}
+function quitarAcumNueva(t){delete _acumNueva[t];totalIngreso();}
+function totalIngreso(){
+  if(!_iClave||!_iCard)return;
+  var vs=INV.filter(function(c){return claveModelo(c)===_iClave;});
   var total=0,partes=[];
   vs.forEach(function(v){
     var idx=INV.indexOf(v);
     var ac=_acum[idx]||0;
     var stk=parseInt(v.stk)||0;
-    // acumulado y stock final por talla
-    var elAc=document.querySelector('[data-acum="'+idx+'"]');
-    if(elAc){elAc.textContent=ac;elAc.style.color=ac>0?'#0F6E56':'#999';}
-    var elFin=document.querySelector('[data-fin="'+idx+'"]');
-    if(elFin){elFin.textContent=stk+ac;elFin.style.fontWeight=ac>0?'800':'400';}
-    // botón Sumar activo solo si hay algo en el lote
-    var inp=document.getElementById('ent-'+idx);
+    var elAc=document.querySelector('[data-iac="'+idx+'"]');
+    if(elAc){elAc.textContent=ac;elAc.style.color=ac>0?'#0F6E56':'#bbb';elAc.style.background=ac>0?'#D6F2E4':'var(--bg2)';}
+    var elFin=document.querySelector('[data-ifin="'+idx+'"]');
+    if(elFin)elFin.textContent=ac>0?('→ '+(stk+ac)):'';
+    var inp=document.getElementById('ient-'+idx);
     var lote=parseInt(inp&&inp.value)||0;
-    var btn=document.getElementById('apl-'+idx);
-    if(btn){
-      btn.disabled=lote<1;
-      btn.style.opacity=lote<1?'0.3':'1';
-      btn.textContent=lote<1?'Sumar':'Sumar +'+lote;
-    }
-    if(ac>0){total+=ac;partes.push('<strong>T:'+v.tal+'</strong> +'+ac+' <span onclick="quitarAcum('+idx+')" style="cursor:pointer;color:#A32D2D;font-weight:700;" title="Quitar">✕</span>');}
+    var btn=document.getElementById('iapl-'+idx);
+    if(btn){btn.disabled=lote<1;btn.style.opacity=lote<1?'0.3':'1';btn.textContent=lote<1?'Sumar':'Sumar +'+lote;}
+    if(ac>0){total+=ac;partes.push('<strong>'+v.tal+'</strong> +'+ac+' <span onclick="quitarAcum('+idx+')" style="cursor:pointer;color:#A32D2D;font-weight:700;">✕</span>');}
   });
-  // Talla nueva
-  var selNew=document.getElementById('ent-new-tal'),qtyNew=document.getElementById('ent-new-qty');
-  if(selNew&&qtyNew){
-    var loteN=parseInt(qtyNew.value)||0;
-    var btnN=document.getElementById('apl-new');
-    if(btnN){btnN.disabled=loteN<1;btnN.style.opacity=loteN<1?'0.3':'1';btnN.textContent=loteN<1?'Sumar':'Sumar +'+loteN;}
-  }
+  var qN=document.getElementById('inew-qty'),btnN=document.getElementById('iapl-new');
+  if(qN&&btnN){var loteN=parseInt(qN.value)||0;btnN.disabled=loteN<1;btnN.style.opacity=loteN<1?'0.3':'1';btnN.textContent=loteN<1?'Sumar':'+'+loteN;}
   Object.keys(_acumNueva).forEach(function(t){
     var q=_acumNueva[t]||0;
-    if(q>0){total+=q;partes.push('<strong>T:'+t+'</strong> +'+q+' <span style="opacity:.75;">(nueva)</span> <span onclick="quitarAcumNueva(\''+esc(t)+'\')" style="cursor:pointer;color:#A32D2D;font-weight:700;" title="Quitar">✕</span>');}
+    if(q>0){total+=q;partes.push('<strong>'+t+'</strong> +'+q+' <span style="opacity:.7;">(nueva)</span> <span onclick="quitarAcumNueva(\''+esc(t)+'\')" style="cursor:pointer;color:#A32D2D;font-weight:700;">✕</span>');}
   });
-  var bar=document.getElementById('entrada-total');
+  var bar=document.getElementById('itot-'+_iCard);
   if(!bar)return;
   if(total>0){
-    document.getElementById('entrada-total-val').textContent=total+' uds.';
-    document.getElementById('entrada-total-desglose').innerHTML=partes.join(' &nbsp;·&nbsp; ');
+    document.getElementById('itot-val-'+_iCard).textContent=total+' uds.';
+    document.getElementById('itot-des-'+_iCard).innerHTML=partes.join(' &nbsp;·&nbsp; ');
     bar.style.display='block';
-  }else{
-    bar.style.display='none';
-  }
+  }else{bar.style.display='none';}
 }
-function renderMotivos(){
-  document.getElementById('entrada-motivos').innerHTML=MOTIVOS.map(function(m){
-    var sel=m.id===_entradaMotivo;
-    return '<button onclick="setMotivo(\''+m.id+'\')" style="padding:10px 6px;border-radius:8px;border:1.5px solid '+(sel?m.col:'var(--bd2)')+';background:'+(sel?m.col:'var(--bg2)')+';color:'+(sel?'#fff':'var(--tx)')+';font-size:0.74rem;font-weight:700;cursor:pointer;touch-action:manipulation;">'+m.lbl+'</button>';
-  }).join('');
-}
-function setMotivo(id){_entradaMotivo=id;renderMotivos();}
-function cerrarEntrada(){document.getElementById('mod-entrada').classList.remove('open');_entradaClave=null;_acum={};_acumNueva={};}
-function confirmarEntrada(){
-  if(!_entradaClave)return;
-  var vs=INV.filter(function(c){return claveModelo(c)===_entradaClave;});
+function confirmarIngresoInline(cardId,clave){
+  var vs=INV.filter(function(c){return claveModelo(c)===clave;});
+  if(!vs.length)return;
   var rep=vs[0];
-  // Si quedó algo escrito sin "Sumar", lo incorporamos al acumulado para no perderlo
+  // Incorporar lotes escritos sin "Sumar"
   vs.forEach(function(v){
-    var i0=INV.indexOf(v);var e0=document.getElementById('ent-'+i0);
+    var i0=INV.indexOf(v);var e0=document.getElementById('ient-'+i0);
     var pend=parseInt(e0&&e0.value)||0;
     if(pend>0){_acum[i0]=(_acum[i0]||0)+pend;if(e0)e0.value='0';}
   });
-  var sPend=document.getElementById('ent-new-tal'),qPend=document.getElementById('ent-new-qty');
-  if(sPend&&qPend){var np=parseInt(qPend.value)||0;if(np>0&&sPend.value){_acumNueva[sPend.value]=(_acumNueva[sPend.value]||0)+np;qPend.value='0';}}
-  // Resumen previo (sin aplicar nada todavía)
+  var sN=document.getElementById('inew-tal'),qN=document.getElementById('inew-qty');
+  if(sN&&qN){var np=parseInt(qN.value)||0;if(np>0&&sN.value){_acumNueva[sN.value]=(_acumNueva[sN.value]||0)+np;qN.value='0';}}
   var prevTot=0,prevList=[];
   vs.forEach(function(v){
     var i0=INV.indexOf(v);var q0=_acum[i0]||0;
@@ -1064,32 +1043,38 @@ function confirmarEntrada(){
   Object.keys(_acumNueva).forEach(function(t){var q=_acumNueva[t]||0;if(q>0){prevTot+=q;prevList.push('• T:'+t+' (nueva)  +'+q);}});
   if(!prevTot){alert('No ingresaste unidades.');return;}
   if(!confirm('¿Confirmar el ingreso?\n\n'+rep.eq+' | '+rep.dor+'\n\n'+prevList.join('\n')+'\n\nTOTAL: '+prevTot+' unidad'+(prevTot!==1?'es':'')+'.'))return;
-  var cambios=[],totalAdd=0;
+  var totalAdd=0;
   vs.forEach(function(v){
     var idx=INV.indexOf(v);
     var q=_acum[idx]||0;
-    if(q>0){var antes=parseInt(v.stk)||0;v.stk=antes+q;totalAdd+=q;cambios.push('T:'+v.tal+' +'+q);registrarMovTalla('mod_suma',v,q,antes);}
+    if(q>0){var antes=parseInt(v.stk)||0;v.stk=antes+q;totalAdd+=q;registrarMovTalla('mod_suma',v,q,antes);}
   });
-  // Tallas nuevas acumuladas
   Object.keys(_acumNueva).forEach(function(nt){
     var nq=_acumNueva[nt]||0;
     if(nt&&nq>0){
-      var nuevo={eq:rep.eq,col:rep.col,dor:rep.dor,ver:rep.ver,año:rep.año,tal:nt,stk:nq,id:Date.now()+Math.floor(Math.random()*1000),
+      var nuevo={eq:rep.eq,col:rep.col,dor:rep.dor,ver:rep.ver,'año':rep['año'],tal:nt,stk:nq,id:Date.now()+Math.floor(Math.random()*1000),
         extras:JSON.parse(JSON.stringify(rep.extras||{})),
-        fotos:(fotosDeModelo(_entradaClave)||[]).map(function(f){return Object.assign({},f);}),
+        fotos:(fotosDeModelo(clave)||[]).map(function(f){return Object.assign({},f);}),
         soloTienda:!!rep.soloTienda,fechaIngreso:new Date().toLocaleDateString('es-HN')};
-      INV.push(nuevo);totalAdd+=nq;cambios.push('T:'+nt+' (nueva) +'+nq);
+      INV.push(nuevo);totalAdd+=nq;
       registrarMovTalla('mod_suma',nuevo,nq,0);
     }
   });
   if(!totalAdd){alert('No ingresaste unidades.');return;}
+  _acum={};_acumNueva={};_iCard=null;_iClave=null;
   save();
-  cerrarEntrada();
   var abiertos=Object.keys(_openGest).filter(function(k){return _openGest[k];});
   renderInv();
   setTimeout(function(){abiertos.forEach(function(cl){var idc=_idByClave[cl];if(idc)abrirGest(idc,cl);});},50);
-  toast2('✓ Entrada registrada: +'+totalAdd+' uds. ('+labelMotivo(_entradaMotivo)+')');
+  toast2('✓ Ingreso registrado: +'+totalAdd+' uds.');
 }
+function renderMotivos(){
+  document.getElementById('entrada-motivos').innerHTML=MOTIVOS.map(function(m){
+    var sel=m.id===_entradaMotivo;
+    return '<button onclick="setMotivo(\''+m.id+'\')" style="padding:10px 6px;border-radius:8px;border:1.5px solid '+(sel?m.col:'var(--bd2)')+';background:'+(sel?m.col:'var(--bg2)')+';color:'+(sel?'#fff':'var(--tx)')+';font-size:0.74rem;font-weight:700;cursor:pointer;touch-action:manipulation;">'+m.lbl+'</button>';
+  }).join('');
+}
+function setMotivo(id){_entradaMotivo=id;renderMotivos();}
 function labelMotivo(id){var m=MOTIVOS.find(function(x){return x.id===id;});return m?m.lbl.replace(/^\S+\s/,''):id;}
 function registrarMovTalla(motivo,v,q,antes){
   var ext='';if(v.extras)Object.keys(v.extras).forEach(function(k){if(v.extras[k])ext+=' · '+v.extras[k];});
@@ -2035,7 +2020,6 @@ function bump(id,d){
   var mx=el.getAttribute('max');
   if(mx!==null&&mx!==''&&v>parseInt(mx))v=parseInt(mx);
   el.value=v;
-  if(String(id).indexOf('ent-')===0&&typeof totalEntrada==='function')totalEntrada();
 }
 function stepper(id){
   return '<button type="button" onclick="bump(\''+id+'\',-1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>';
