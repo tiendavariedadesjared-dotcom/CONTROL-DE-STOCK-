@@ -279,13 +279,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <!-- ═══════════ TOOLS ═══════════ -->
   <div id="sec-tools" class="section">
     <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg>Consignación</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Entregá producto a una persona (descuenta stock). Al liquidar, lo vendido se registra y lo no vendido vuelve al stock.</div>
-      <button class="btn btn-gr" onclick="abrirNuevaConsig()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva consignación</button>
-      <div id="consig-lista"></div>
-    </div>
-
-    <div class="card">
       <div class="card-title"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>Bitácora de movimientos</div>
       <div class="filtros" style="grid-template-columns:1fr 1fr;">
         <select id="bit-f-tipo" onchange="renderBitacora()">
@@ -296,7 +289,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <option value="devolucion">Devoluciones</option>
           <option value="cambio">Cambios</option>
           <option value="correccion">Correcciones</option>
-          <option value="baja">Bajas / pérdidas</option>
+          <option value="cuarentena">Cuarentena</option>
+          <option value="baja">Bajas definitivas</option>
           <option value="consignacion">Consignaciones</option>
           <option value="edicion">Ediciones</option>
           <option value="eliminacion">Eliminaciones</option>
@@ -304,6 +298,19 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <select id="bit-f-eq" onchange="renderBitacora()"><option value="">Todos los equipos</option></select>
       </div>
       <div id="bit-lista" style="max-height:360px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Cuarentena</div>
+      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Camisetas que no aparecieron al contar. No están en el stock, pero si las encontrás podés devolverlas al inventario desde acá.</div>
+      <div id="cuar-lista"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg>Consignación</div>
+      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Entregá producto a una persona (descuenta stock). Al liquidar, lo vendido se registra y lo no vendido vuelve al stock.</div>
+      <button class="btn btn-gr" onclick="abrirNuevaConsig()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva consignación</button>
+      <div id="consig-lista"></div>
     </div>
 
     <div class="card">
@@ -563,6 +570,15 @@ function fotoObjPos(f){
   var y=(f&&f.posY!==undefined)?f.posY:50;
   return x+'% '+y+'%';
 }
+function cuarPorClave(clave){
+  var out={},tot=0;
+  itemsCuarentena().forEach(function(b){
+    var c=b.cuar;
+    var k=claveModelo({eq:c.eq,col:c.col,dor:c.dor,ver:c.ver,'año':c['año'],extras:c.extras});
+    if(k===clave){out[c.tal]=(out[c.tal]||0)+(c.qty||0);tot+=(c.qty||0);}
+  });
+  return {porTalla:out,total:tot};
+}
 function fotosDeModelo(clave){
   // Busca fotos en cualquier variante del modelo
   var conFoto=INV.find(function(x){return claveModelo(x)===clave&&x.fotos&&x.fotos.length;});
@@ -578,7 +594,7 @@ function showTab(t){
   if(t==='inv')renderInv();
   if(t==='nuevo')renderNuevoForm();
   if(t==='listas')renderListas();
-  if(t==='tools'){renderConsigLista();renderBitacora();actualizarOffCount();}
+  if(t==='tools'){renderConsigLista();renderBitacora();actualizarOffCount();renderCuarentena();}
   window.scrollTo(0,0);
 }
 
@@ -593,7 +609,7 @@ window.aplicarDatosFirebase=function(){
     renderInv();
     setTimeout(function(){abiertos.forEach(function(clave){var idc=_idByClave[clave];if(idc)abrirGest(idc,clave,true);});},60);
   }
-  else if(id==='sec-tools'){renderConsigLista();renderBitacora();actualizarOffCount();}
+  else if(id==='sec-tools'){renderConsigLista();renderBitacora();actualizarOffCount();renderCuarentena();}
   else if(id==='sec-listas')renderListas();
   renderCartBadge();
   mostrarToast();
@@ -660,6 +676,7 @@ function renderInv(){
     var cardId='card-'+gi;
     _idByClave[k]=cardId;_claveById[cardId]=k;
     var fotos=fotosDeModelo(k);
+    var cuarM=cuarPorClave(k);
     var principal=fotos.find(function(f){return f.principal;})||fotos[0];
     var lbl=(rep.eq+' | '+rep.dor).replace(/'/g,"\\'");
     var borde=bordeClass(rep);
@@ -678,9 +695,10 @@ function renderInv(){
     // Filas LECTURA
     var filasLect=vs.map(function(v){
       var idx=INV.indexOf(v),ag=(parseInt(v.stk)||0)===0;
-      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--bd);'+(ag?'opacity:0.5;':'')+'">'+
+      var cq=cuarM.porTalla[v.tal]||0;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--bd);'+(ag&&!cq?'opacity:0.5;':'')+'">'+
         '<span style="font-size:0.88rem;font-weight:700;color:var(--tx);min-width:38px;">'+v.tal+(v.soloTienda?' <span style="font-size:0.5rem;font-weight:800;color:#fff;background:#A32D2D;border-radius:4px;padding:1px 4px;">OFF</span>':'')+'</span>'+
-        '<span style="font-size:0.78rem;color:var(--tx2);flex:1;text-align:center;">'+v.ver+'</span>'+
+        '<span style="font-size:0.78rem;color:var(--tx2);flex:1;text-align:center;">'+v.ver+(cq?' <span style="font-size:0.58rem;font-weight:800;color:#fff;background:#C47F2B;border-radius:4px;padding:1px 5px;white-space:nowrap;" title="En cuarentena">🔍 '+cq+'</span>':'')+'</span>'+
         '<span style="display:flex;flex-direction:column;align-items:flex-end;min-width:58px;line-height:1.1;">'+
           '<span style="font-size:1rem;font-weight:700;color:'+(ag?'#A32D2D':'#0F6E56')+';">'+(ag?'Agotado':v.stk)+'</span>'+
           '<span class="cartprev" data-cp="'+v.id+'" style="font-size:0.6rem;font-weight:700;margin-top:1px;display:none;white-space:nowrap;"></span>'+
@@ -742,6 +760,7 @@ function renderInv(){
       fotoHtml+
       '<div class="inv-top"><div><div class="inv-name">'+rep.eq+'</div><div class="inv-sub">'+rep.dor+'</div></div><span class="tag">'+sw(rep.col)+rep.col+'</span></div>'+
       '<div class="tags"><span class="tag">'+rep.año+'</span>'+extTags+'</div>'+
+      (cuarM.total?'<div style="font-size:0.64rem;font-weight:700;color:#8A5A00;background:#FAEEDA;border-radius:6px;padding:5px 8px;margin-bottom:6px;">🔍 '+cuarM.total+' uds. en cuarentena (no aparecieron) · revisá en Tools</div>':'')+
       '<div class="tal-head"><span>Talla</span><span>Versión</span><span>Stock</span></div>'+
       '<div id="lect-'+cardId+'">'+filasLect+'</div>'+
       gestHtml+
@@ -804,7 +823,8 @@ var _bajaIdx=-1,_bajaMotivo='correccion';
 var MOTIVOS_BAJA=[
   {id:'correccion',lbl:'🔧 Corrección',col:'#8A8A8A',sub:'El conteo estaba mal'},
   {id:'cambio',    lbl:'🔁 Sale por cambio',col:'#5BB8F5',sub:'El cliente se la llevó en un cambio'},
-  {id:'baja',      lbl:'⚠️ Baja / pérdida',col:'#C1440E',sub:'Dañada, extraviada, regalada'}
+  {id:'cuarentena',lbl:'🔍 Cuarentena',col:'#C47F2B',sub:'No aparece, pero puede volver a aparecer'},
+  {id:'baja',      lbl:'⚠️ Baja definitiva',col:'#A32D2D',sub:'Dañada, regalada, perdida sin retorno'}
 ];
 // ── SUBIR STOCK con motivo (botón +) ──
 var _subirIdx=-1,_subirMotivo='cambio';
@@ -891,8 +911,13 @@ function confirmarBaja(){
       llevada:{eq:c.eq,dor:c.dor,col:c.col,ver:c.ver,año:c.año,extras:c.extras||{},tal:c.tal,qty:q},
       fecha:new Date().toLocaleDateString('es-HN'),salIdx:null});
     logBit('cambio',desc,'Sale por cambio · −'+q+' uds. (producto que se llevó el cliente)');
+  }else if(_bajaMotivo==='cuarentena'){
+    logBit('cuarentena',desc,'En cuarentena · −'+q+' uds. (no aparece)');
+    // Guardamos los datos del producto en la entrada para poder devolverlo después
+    BITACORA[0].cuar={estado:'activa',qty:q,invId:c.id,
+      eq:c.eq,dor:c.dor,col:c.col,ver:c.ver,'año':c['año'],tal:c.tal,extras:JSON.parse(JSON.stringify(c.extras||{}))};
   }else if(_bajaMotivo==='baja'){
-    logBit('baja',desc,'Baja / pérdida · −'+q+' uds. ('+antes+' → '+c.stk+')');
+    logBit('baja',desc,'Baja definitiva · −'+q+' uds. ('+antes+' → '+c.stk+')');
   }
   save();
   cerrarBaja();
@@ -1600,8 +1625,8 @@ function renderBitacora(){
   });
   var cont=document.getElementById('bit-lista');
   if(!lista.length){cont.innerHTML='<div style="font-size:0.75rem;color:var(--tx2);text-align:center;padding:14px;">Sin movimientos.</div>';return;}
-  var colores={ingreso:'#0F6E56',mod_suma:'#0E7C86',salida:'#A32D2D',devolucion:'#b03a6e',cambio:'#1a6fa0',correccion:'#8A6A2B',baja:'#C1440E',consignacion:'#7B4F2E',edicion:'#666',eliminacion:'#A32D2D'};
-  var etiquetas={ingreso:'PRODUCTO NUEVO',mod_suma:'AUMENTO STOCK',salida:'VENTA',devolucion:'DEVOLUCIÓN',cambio:'CAMBIO',correccion:'CORRECCIÓN',baja:'BAJA',consignacion:'CONSIGNACIÓN',edicion:'EDICIÓN',eliminacion:'ELIMINACIÓN'};
+  var colores={ingreso:'#0F6E56',mod_suma:'#0E7C86',salida:'#A32D2D',devolucion:'#b03a6e',cambio:'#1a6fa0',correccion:'#8A6A2B',cuarentena:'#C47F2B',baja:'#A32D2D',consignacion:'#7B4F2E',edicion:'#666',eliminacion:'#A32D2D'};
+  var etiquetas={ingreso:'PRODUCTO NUEVO',mod_suma:'AUMENTO STOCK',salida:'VENTA',devolucion:'DEVOLUCIÓN',cambio:'CAMBIO',correccion:'CORRECCIÓN',cuarentena:'CUARENTENA',baja:'BAJA DEFINITIVA',consignacion:'CONSIGNACIÓN',edicion:'EDICIÓN',eliminacion:'ELIMINACIÓN'};
   cont.innerHTML=lista.slice(0,500).map(function(b){
     var tl=String(b.tipo).toLowerCase();
     var col=colores[tl]||'#666';
@@ -1636,6 +1661,95 @@ function eliminarBit(id){
   save();
   renderBitacora();
   toast2('✓ Movimiento borrado de la bitácora');
+}
+
+// ═══════════════ CUARENTENA ═══════════════
+function itemsCuarentena(){
+  return BITACORA.filter(function(b){return b.cuar&&b.cuar.estado==='activa'&&(b.cuar.qty||0)>0;});
+}
+function renderCuarentena(){
+  var cont=document.getElementById('cuar-lista');if(!cont)return;
+  var items=itemsCuarentena();
+  if(!items.length){
+    cont.innerHTML='<div style="font-size:0.78rem;color:var(--tx2);text-align:center;padding:12px;">No hay nada en cuarentena. 👍</div>';
+    return;
+  }
+  var totU=items.reduce(function(s,b){return s+(b.cuar.qty||0);},0);
+  cont.innerHTML='<div style="font-size:0.7rem;font-weight:700;color:#8A5A00;background:#FAEEDA;border-radius:7px;padding:7px 10px;margin-bottom:8px;">'+items.length+' registro(s) · '+totU+' unidad(es) sin aparecer</div>'+
+  items.map(function(b){
+    var c=b.cuar;
+    var fotos=fotosDeBit(b);
+    var portada=fotos.find(function(f){return f.principal;})||fotos[0];
+    var thumb=portada
+      ? '<img src="'+portada.url+'" onerror="this.style.opacity=0.25" style="width:44px;height:44px;border-radius:7px;object-fit:cover;object-position:'+fotoObjPos(portada)+';flex-shrink:0;border:1px solid var(--bd);">'
+      : '<div style="width:44px;height:44px;border-radius:7px;background:var(--bg2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;">👕</div>';
+    var ext='';if(c.extras)Object.keys(c.extras).forEach(function(k){if(c.extras[k])ext+=' · '+c.extras[k];});
+    return '<div style="border:0.5px solid var(--bd);border-radius:9px;padding:9px;margin-bottom:7px;">'+
+      '<div style="display:flex;gap:9px;align-items:center;margin-bottom:8px;">'+
+        thumb+
+        '<div style="flex:1;min-width:0;font-size:0.74rem;line-height:1.35;">'+
+          '<strong>'+c.eq+' · '+c.dor+'</strong> · T:'+c.tal+
+          '<br><span style="color:var(--tx2);font-size:0.66rem;">'+c.ver+' · '+c.col+' · '+c['año']+ext+'</span>'+
+          '<br><span style="color:#8A5A00;font-size:0.66rem;font-weight:700;">'+c.qty+' uds. · desde '+b.fecha+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;">'+
+        '<button onclick="devolverCuarentena(\''+esc(String(b.id))+'\')" style="flex:2;padding:8px;border:none;border-radius:7px;background:var(--gr);color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;touch-action:manipulation;">✓ Apareció — devolver al stock</button>'+
+        '<button onclick="bajaDefinitivaCuarentena(\''+esc(String(b.id))+'\')" style="flex:1;padding:8px;border:0.5px solid #f0b5b5;border-radius:7px;background:#FCEBEB;color:#A32D2D;font-size:0.72rem;font-weight:700;cursor:pointer;touch-action:manipulation;">Baja definitiva</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function buscarItemCuar(c){
+  var byId=INV.find(function(x){return String(x.id)===String(c.invId);});
+  if(byId)return byId;
+  return INV.find(function(x){
+    return x.eq===c.eq&&String(x.dor||'')===String(c.dor||'')&&String(x.tal)===String(c.tal)&&
+           x.ver===c.ver&&x.col===c.col&&String(x['año'])===String(c['año'])&&extrasIguales(x.extras,c.extras);
+  })||null;
+}
+function devolverCuarentena(bitId){
+  var b=BITACORA.find(function(x){return String(x.id)===String(bitId);});
+  if(!b||!b.cuar)return;
+  var c=b.cuar;
+  var max=c.qty||0;
+  var txt=prompt('¿Cuántas unidades aparecieron?\n\n'+c.eq+' '+c.dor+' T:'+c.tal+'\nEn cuarentena: '+max+' uds.',String(max));
+  if(txt===null)return;
+  var q=parseInt(txt)||0;
+  if(q<1){alert('Ingresá una cantidad válida.');return;}
+  if(q>max){alert('No podés devolver más de '+max+' uds.');return;}
+  var item=buscarItemCuar(c);
+  var ext='';if(c.extras)Object.keys(c.extras).forEach(function(k){if(c.extras[k])ext+=' · '+c.extras[k];});
+  var desc=c.eq+' | '+c.dor+' | T:'+c.tal+' | '+c.ver+' | '+c.col+ext;
+  if(item){
+    var antes=parseInt(item.stk)||0;
+    item.stk=antes+q;
+    logBit('correccion',desc,'Volvió de cuarentena · +'+q+' uds. ('+antes+' → '+item.stk+')');
+  }else{
+    // La talla ya no existe: la recreamos
+    INV.push({eq:c.eq,dor:c.dor,col:c.col,ver:c.ver,'año':c['año'],tal:c.tal,stk:q,
+      id:Date.now()+Math.floor(Math.random()*1000),
+      extras:JSON.parse(JSON.stringify(c.extras||{})),fotos:[],soloTienda:false,
+      fechaIngreso:new Date().toLocaleDateString('es-HN')});
+    logBit('correccion',desc,'Volvió de cuarentena · +'+q+' uds. (talla recreada)');
+  }
+  c.qty=max-q;
+  if(c.qty<=0)c.estado='devuelta';
+  save();
+  renderCuarentena();renderInv();renderBitacora();
+  toast2('✓ '+q+' uds. devueltas al stock');
+}
+function bajaDefinitivaCuarentena(bitId){
+  var b=BITACORA.find(function(x){return String(x.id)===String(bitId);});
+  if(!b||!b.cuar)return;
+  var c=b.cuar;
+  if(!confirm('¿Dar de BAJA DEFINITIVA estas '+c.qty+' uds.?\n\n'+c.eq+' '+c.dor+' T:'+c.tal+'\n\nYa no volverán al stock ni aparecerán en cuarentena.'))return;
+  var ext='';if(c.extras)Object.keys(c.extras).forEach(function(k){if(c.extras[k])ext+=' · '+c.extras[k];});
+  logBit('baja',c.eq+' | '+c.dor+' | T:'+c.tal+' | '+c.ver+' | '+c.col+ext,'Baja definitiva desde cuarentena · '+c.qty+' uds.');
+  c.estado='baja';
+  save();
+  renderCuarentena();renderBitacora();
+  toast2('✓ Baja definitiva registrada');
 }
 
 // ═══════════════ OFF LINE export ═══════════════
