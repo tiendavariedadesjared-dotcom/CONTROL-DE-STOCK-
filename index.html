@@ -1233,25 +1233,23 @@ function renderFotosPanel(){
           '<span id="enc-z-val" style="font-size:0.6rem;color:var(--tx2);min-width:36px;text-align:right;">'+pz+'%</span>'+
         '</div>'+
         '<div style="display:flex;gap:6px;margin-top:9px;">'+
-          '<button onclick="encReset()" style="flex:1;padding:7px;border:0.5px solid var(--bd2);border-radius:7px;background:var(--bg2);font-size:0.68rem;font-weight:600;cursor:pointer;">Restablecer</button>'+
-          '<button onclick="encGuardar()" style="flex:2;padding:7px;border:none;border-radius:7px;background:var(--gr);color:#fff;font-size:0.7rem;font-weight:700;cursor:pointer;">✓ Guardar encuadre</button>'+
+          '<button onclick="encGuardar()" style="flex:1;padding:8px;border:none;border-radius:7px;background:var(--gr);color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;touch-action:manipulation;">✓ Guardar encuadre</button>'+
         '</div>'+
       '</div>'+
     '</div>';
   cont.innerHTML=encuadre+
-  '<div class="foto-thumbs">'+fotos.map(function(f,i){
-    return '<div class="foto-thumb-wrap">'+
-      '<img src="'+f.url+'" class="'+(f.principal?'principal':'')+'" style="object-position:'+fotoObjPos(f)+';" onclick="abrirLbox('+esc(JSON.stringify(fotos.map(function(x){return x.url;})))+','+i+')" onerror="this.style.opacity=0.3">'+
-      (f.principal?'<span class="foto-thumb-star">★ portada</span>':'')+
-    '</div>';
-  }).join('')+'</div>'+
-  '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">'+fotos.map(function(f,i){
-    return '<div style="display:flex;gap:3px;align-items:center;background:var(--bg2);border-radius:6px;padding:3px 5px;">'+
-      '<span style="font-size:0.62rem;color:var(--tx2);">#'+(i+1)+'</span>'+
-      (i>0?'<button onclick="fotoMover('+i+',-1)" style="border:none;background:none;cursor:pointer;font-size:0.8rem;">◀</button>':'')+
-      (f.principal?'<span style="font-size:0.6rem;color:var(--gr);font-weight:700;">portada</span>':'<button onclick="fotoPrincipal('+i+')" style="border:none;background:none;cursor:pointer;font-size:0.6rem;color:var(--tx2);">hacer portada</button>')+
-      (i<fotos.length-1?'<button onclick="fotoMover('+i+',1)" style="border:none;background:none;cursor:pointer;font-size:0.8rem;">▶</button>':'')+
-      '<button onclick="fotoDel('+i+')" style="border:none;background:none;cursor:pointer;color:#A32D2D;font-size:0.8rem;">✕</button>'+
+  '<div style="display:flex;flex-wrap:wrap;gap:8px;">'+fotos.map(function(f,i){
+    return '<div style="width:88px;border:1.5px solid '+(f.principal?'var(--gr)':'var(--bd)')+';border-radius:9px;overflow:hidden;background:var(--bg);">'+
+      '<div style="position:relative;width:88px;height:88px;cursor:pointer;" onclick="abrirLbox('+esc(JSON.stringify(fotos.map(function(x){return x.url;})))+','+i+')">'+
+        '<img src="'+f.url+'" style="width:100%;height:100%;object-fit:cover;object-position:'+fotoObjPos(f)+';display:block;" onerror="this.style.opacity=0.3">'+
+        (f.principal?'<span style="position:absolute;bottom:0;left:0;right:0;background:var(--gr);color:#fff;font-size:0.55rem;font-weight:700;text-align:center;padding:2px 0;">★ PORTADA</span>':'')+
+      '</div>'+
+      '<div style="display:flex;align-items:center;justify-content:center;gap:1px;padding:3px 2px;background:var(--bg2);">'+
+        (i>0?'<button onclick="fotoMover('+i+',-1)" title="Mover antes" style="border:none;background:none;cursor:pointer;font-size:0.7rem;color:var(--tx2);padding:2px 3px;">◀</button>':'<span style="width:15px;"></span>')+
+        (f.principal?'<span style="flex:1;font-size:0.55rem;color:var(--gr);font-weight:700;text-align:center;">activa</span>':'<button onclick="fotoPrincipal('+i+')" title="Hacer portada" style="flex:1;border:none;background:none;cursor:pointer;font-size:0.55rem;color:var(--tx2);font-weight:600;padding:2px;">portada</button>')+
+        (i<fotos.length-1?'<button onclick="fotoMover('+i+',1)" title="Mover después" style="border:none;background:none;cursor:pointer;font-size:0.7rem;color:var(--tx2);padding:2px 3px;">▶</button>':'<span style="width:15px;"></span>')+
+        '<button onclick="fotoDel('+i+')" title="Eliminar" style="border:none;background:none;cursor:pointer;color:#A32D2D;font-size:0.7rem;padding:2px 3px;">✕</button>'+
+      '</div>'+
     '</div>';
   }).join('')+'</div>';
 }
@@ -1286,11 +1284,7 @@ function encGuardar(){
   setTimeout(function(){m.className='msg';},2200);
   renderFotosPanel();
 }
-function encReset(){
-  var x=document.getElementById('enc-x'),y=document.getElementById('enc-y'),z=document.getElementById('enc-z');
-  if(x)x.value=50;if(y)y.value=50;if(z)z.value=100;
-  encUpdate();
-}
+
 function fotoAdd(){
   var inp=document.getElementById('fotos-url'),msg=document.getElementById('fotos-msg');
   var url=normalizarFotoUrl((inp.value||'').trim());
