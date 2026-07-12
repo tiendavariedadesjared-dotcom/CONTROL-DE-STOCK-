@@ -358,6 +358,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <div id="entrada-tallas" style="margin-bottom:12px;"></div>
     <div id="entrada-nueva-talla" style="margin-bottom:12px;"></div>
+    <div id="entrada-total" style="display:none;background:#EAF7F1;border:1px solid #a3d9bf;border-radius:9px;padding:10px 12px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.74rem;color:var(--grd);font-weight:700;">TOTAL acumulado del ingreso</span>
+        <span style="font-size:1.15rem;font-weight:800;color:var(--grd);" id="entrada-total-val">0 uds.</span>
+      </div>
+      <div id="entrada-total-desglose" style="font-size:0.66rem;color:#0a5c3f;margin-top:5px;line-height:1.5;"></div>
+    </div>
     <button class="btn btn-gr" onclick="confirmarEntrada()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar entrada</button>
     <button class="btn btn-outline" onclick="cerrarEntrada()">Cancelar</button>
   </div>
@@ -922,6 +929,7 @@ var MOTIVOS=[
 ];
 function abrirEntrada(clave){
   _entradaClave=clave;_entradaMotivo='ingreso';
+  _acum={};_acumNueva={};
   var vs=INV.filter(function(c){return claveModelo(c)===clave;});
   if(!vs.length)return;
   var rep=vs[0];
@@ -929,15 +937,20 @@ function abrirEntrada(clave){
   renderMotivos();
   vs.sort(function(a,b){var ia=TALLA_ORDEN.indexOf(String(a.tal).toUpperCase()),ib=TALLA_ORDEN.indexOf(String(b.tal).toUpperCase());return (ia<0?99:ia)-(ib<0?99:ib);});
   document.getElementById('entrada-tallas').innerHTML=
-    '<div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:6px;">Unidades a sumar por talla:</div>'+
+    '<div style="font-size:0.68rem;color:var(--tx2);margin-bottom:8px;line-height:1.4;">Contá el paquete que tenés en la mano, poné la cantidad y tocá <strong>Sumar</strong>. Se agrega al acumulado de esa talla y podés volver más tarde con otro paquete.</div>'+
     vs.map(function(v){
       var idx=INV.indexOf(v);
-      return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:0.5px solid var(--bd);">'+
-        '<span style="font-size:0.85rem;font-weight:700;min-width:40px;">T: '+v.tal+'</span>'+
-        '<span style="font-size:0.72rem;color:var(--tx2);flex:1;">stock: '+v.stk+'</span>'+
-        stepper('ent-'+idx)+
-        '<input type="number" min="0" value="0" id="ent-'+idx+'" inputmode="numeric" style="width:52px;text-align:center;">'+
-        stepperUp('ent-'+idx)+
+      return '<div id="fila-ent-'+idx+'" style="background:var(--bg2);border-radius:9px;padding:9px 10px;margin-bottom:7px;">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">'+
+          '<span style="font-size:0.92rem;font-weight:800;">T: '+v.tal+'</span>'+
+          '<span style="font-size:0.68rem;color:var(--tx2);">acumulado: <strong data-acum="'+idx+'" style="color:#0F6E56;font-size:1rem;">0</strong> <span style="opacity:.7;">(stock '+v.stk+' → <span data-fin="'+idx+'">'+v.stk+'</span>)</span></span>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;">'+
+          '<button type="button" onclick="bump(\'ent-'+idx+'\',-1)" style="width:38px;height:42px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg);font-size:1.35rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>'+
+          '<input type="number" min="0" value="0" id="ent-'+idx+'" inputmode="numeric" oninput="totalEntrada()" onchange="totalEntrada()" style="width:60px;height:42px;text-align:center;font-size:1.15rem;font-weight:800;color:#0F6E56;">'+
+          '<button type="button" onclick="bump(\'ent-'+idx+'\',1)" style="width:46px;height:42px;border:none;border-radius:8px;background:var(--gr);color:#fff;font-size:1.45rem;line-height:1;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button>'+
+          '<button type="button" id="apl-'+idx+'" onclick="sumarLote('+idx+')" style="flex:1;height:42px;border:none;border-radius:8px;background:#1A1A1A;color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;touch-action:manipulation;opacity:0.3;" disabled>Sumar</button>'+
+        '</div>'+
       '</div>';
     }).join('');
   // Agregar talla nueva
@@ -946,12 +959,81 @@ function abrirEntrada(clave){
   document.getElementById('entrada-nueva-talla').innerHTML=disp.length?
     '<div style="font-size:0.7rem;font-weight:600;color:var(--tx2);margin-bottom:5px;border-top:1px dashed var(--bd);padding-top:8px;">➕ Agregar talla nueva:</div>'+
     '<div style="display:flex;gap:6px;align-items:center;">'+
-      '<select id="ent-new-tal" style="flex:1;">'+disp.map(function(t){return'<option>'+t+'</option>';}).join('')+'</select>'+
-      stepper('ent-new-qty')+
-      '<input type="number" id="ent-new-qty" min="0" value="0" style="width:52px;text-align:center;">'+
-      stepperUp('ent-new-qty')+
+      '<select id="ent-new-tal" onchange="totalEntrada()" style="flex:1;height:42px;">'+disp.map(function(t){return'<option>'+t+'</option>';}).join('')+'</select>'+
+      '<button type="button" onclick="bump(\'ent-new-qty\',-1)" style="width:38px;height:42px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg);font-size:1.35rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>'+
+      '<input type="number" id="ent-new-qty" min="0" value="0" inputmode="numeric" oninput="totalEntrada()" onchange="totalEntrada()" style="width:58px;height:42px;text-align:center;font-size:1.1rem;font-weight:800;color:#0F6E56;">'+
+      '<button type="button" onclick="bump(\'ent-new-qty\',1)" style="width:44px;height:42px;border:none;border-radius:8px;background:var(--gr);color:#fff;font-size:1.4rem;line-height:1;font-weight:700;cursor:pointer;flex-shrink:0;touch-action:manipulation;">+</button>'+
+      '<button type="button" id="apl-new" onclick="sumarLoteNueva()" style="height:42px;padding:0 12px;border:none;border-radius:8px;background:#1A1A1A;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;touch-action:manipulation;opacity:0.3;" disabled>Sumar</button>'+
     '</div>':'';
   document.getElementById('mod-entrada').classList.add('open');
+  totalEntrada();
+}
+var _acum={},_acumNueva={};
+function sumarLote(idx){
+  var inp=document.getElementById('ent-'+idx);
+  var q=parseInt(inp&&inp.value)||0;
+  if(q<1)return;
+  _acum[idx]=(_acum[idx]||0)+q;
+  inp.value='0';
+  totalEntrada();
+  var fila=document.getElementById('fila-ent-'+idx);
+  if(fila){fila.style.transition='background .25s';fila.style.background='#D6F2E4';setTimeout(function(){fila.style.background='var(--bg2)';},350);}
+}
+function sumarLoteNueva(){
+  var sel=document.getElementById('ent-new-tal'),inp=document.getElementById('ent-new-qty');
+  if(!sel||!inp)return;
+  var t=sel.value,q=parseInt(inp.value)||0;
+  if(!t||q<1)return;
+  _acumNueva[t]=(_acumNueva[t]||0)+q;
+  inp.value='0';
+  totalEntrada();
+}
+function quitarAcum(idx){_acum[idx]=0;totalEntrada();}
+function quitarAcumNueva(t){delete _acumNueva[t];totalEntrada();}
+function totalEntrada(){
+  if(!_entradaClave)return;
+  var vs=INV.filter(function(c){return claveModelo(c)===_entradaClave;});
+  var total=0,partes=[];
+  vs.forEach(function(v){
+    var idx=INV.indexOf(v);
+    var ac=_acum[idx]||0;
+    var stk=parseInt(v.stk)||0;
+    // acumulado y stock final por talla
+    var elAc=document.querySelector('[data-acum="'+idx+'"]');
+    if(elAc){elAc.textContent=ac;elAc.style.color=ac>0?'#0F6E56':'#999';}
+    var elFin=document.querySelector('[data-fin="'+idx+'"]');
+    if(elFin){elFin.textContent=stk+ac;elFin.style.fontWeight=ac>0?'800':'400';}
+    // botón Sumar activo solo si hay algo en el lote
+    var inp=document.getElementById('ent-'+idx);
+    var lote=parseInt(inp&&inp.value)||0;
+    var btn=document.getElementById('apl-'+idx);
+    if(btn){
+      btn.disabled=lote<1;
+      btn.style.opacity=lote<1?'0.3':'1';
+      btn.textContent=lote<1?'Sumar':'Sumar +'+lote;
+    }
+    if(ac>0){total+=ac;partes.push('<strong>T:'+v.tal+'</strong> +'+ac+' <span onclick="quitarAcum('+idx+')" style="cursor:pointer;color:#A32D2D;font-weight:700;" title="Quitar">✕</span>');}
+  });
+  // Talla nueva
+  var selNew=document.getElementById('ent-new-tal'),qtyNew=document.getElementById('ent-new-qty');
+  if(selNew&&qtyNew){
+    var loteN=parseInt(qtyNew.value)||0;
+    var btnN=document.getElementById('apl-new');
+    if(btnN){btnN.disabled=loteN<1;btnN.style.opacity=loteN<1?'0.3':'1';btnN.textContent=loteN<1?'Sumar':'Sumar +'+loteN;}
+  }
+  Object.keys(_acumNueva).forEach(function(t){
+    var q=_acumNueva[t]||0;
+    if(q>0){total+=q;partes.push('<strong>T:'+t+'</strong> +'+q+' <span style="opacity:.75;">(nueva)</span> <span onclick="quitarAcumNueva(\''+esc(t)+'\')" style="cursor:pointer;color:#A32D2D;font-weight:700;" title="Quitar">✕</span>');}
+  });
+  var bar=document.getElementById('entrada-total');
+  if(!bar)return;
+  if(total>0){
+    document.getElementById('entrada-total-val').textContent=total+' uds.';
+    document.getElementById('entrada-total-desglose').innerHTML=partes.join(' &nbsp;·&nbsp; ');
+    bar.style.display='block';
+  }else{
+    bar.style.display='none';
+  }
 }
 function renderMotivos(){
   document.getElementById('entrada-motivos').innerHTML=MOTIVOS.map(function(m){
@@ -960,22 +1042,37 @@ function renderMotivos(){
   }).join('');
 }
 function setMotivo(id){_entradaMotivo=id;renderMotivos();}
-function cerrarEntrada(){document.getElementById('mod-entrada').classList.remove('open');_entradaClave=null;}
+function cerrarEntrada(){document.getElementById('mod-entrada').classList.remove('open');_entradaClave=null;_acum={};_acumNueva={};}
 function confirmarEntrada(){
   if(!_entradaClave)return;
   var vs=INV.filter(function(c){return claveModelo(c)===_entradaClave;});
   var rep=vs[0];
+  // Si quedó algo escrito sin "Sumar", lo incorporamos al acumulado para no perderlo
+  vs.forEach(function(v){
+    var i0=INV.indexOf(v);var e0=document.getElementById('ent-'+i0);
+    var pend=parseInt(e0&&e0.value)||0;
+    if(pend>0){_acum[i0]=(_acum[i0]||0)+pend;if(e0)e0.value='0';}
+  });
+  var sPend=document.getElementById('ent-new-tal'),qPend=document.getElementById('ent-new-qty');
+  if(sPend&&qPend){var np=parseInt(qPend.value)||0;if(np>0&&sPend.value){_acumNueva[sPend.value]=(_acumNueva[sPend.value]||0)+np;qPend.value='0';}}
+  // Resumen previo (sin aplicar nada todavía)
+  var prevTot=0,prevList=[];
+  vs.forEach(function(v){
+    var i0=INV.indexOf(v);var q0=_acum[i0]||0;
+    if(q0>0){prevTot+=q0;prevList.push('• T:'+v.tal+'  +'+q0+'  ('+v.stk+' → '+((parseInt(v.stk)||0)+q0)+')');}
+  });
+  Object.keys(_acumNueva).forEach(function(t){var q=_acumNueva[t]||0;if(q>0){prevTot+=q;prevList.push('• T:'+t+' (nueva)  +'+q);}});
+  if(!prevTot){alert('No ingresaste unidades.');return;}
+  if(!confirm('¿Confirmar el ingreso?\n\n'+rep.eq+' | '+rep.dor+'\n\n'+prevList.join('\n')+'\n\nTOTAL: '+prevTot+' unidad'+(prevTot!==1?'es':'')+'.'))return;
   var cambios=[],totalAdd=0;
   vs.forEach(function(v){
     var idx=INV.indexOf(v);
-    var inp=document.getElementById('ent-'+idx);
-    var q=parseInt(inp&&inp.value)||0;
+    var q=_acum[idx]||0;
     if(q>0){var antes=parseInt(v.stk)||0;v.stk=antes+q;totalAdd+=q;cambios.push('T:'+v.tal+' +'+q);registrarMovTalla('mod_suma',v,q,antes);}
   });
-  // Talla nueva
-  var selNew=document.getElementById('ent-new-tal'),qtyNew=document.getElementById('ent-new-qty');
-  if(selNew&&qtyNew){
-    var nt=selNew.value,nq=parseInt(qtyNew.value)||0;
+  // Tallas nuevas acumuladas
+  Object.keys(_acumNueva).forEach(function(nt){
+    var nq=_acumNueva[nt]||0;
     if(nt&&nq>0){
       var nuevo={eq:rep.eq,col:rep.col,dor:rep.dor,ver:rep.ver,año:rep.año,tal:nt,stk:nq,id:Date.now()+Math.floor(Math.random()*1000),
         extras:JSON.parse(JSON.stringify(rep.extras||{})),
@@ -984,7 +1081,7 @@ function confirmarEntrada(){
       INV.push(nuevo);totalAdd+=nq;cambios.push('T:'+nt+' (nueva) +'+nq);
       registrarMovTalla('mod_suma',nuevo,nq,0);
     }
-  }
+  });
   if(!totalAdd){alert('No ingresaste unidades.');return;}
   save();
   cerrarEntrada();
@@ -1938,6 +2035,7 @@ function bump(id,d){
   var mx=el.getAttribute('max');
   if(mx!==null&&mx!==''&&v>parseInt(mx))v=parseInt(mx);
   el.value=v;
+  if(String(id).indexOf('ent-')===0&&typeof totalEntrada==='function')totalEntrada();
 }
 function stepper(id){
   return '<button type="button" onclick="bump(\''+id+'\',-1)" style="width:34px;height:38px;border:0.5px solid var(--bd2);border-radius:8px;background:var(--bg2);font-size:1.3rem;line-height:1;cursor:pointer;flex-shrink:0;touch-action:manipulation;">−</button>';
