@@ -117,6 +117,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 /* FILTROS */
 .filtros{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;}
 .filtros select{font-size:0.74rem;padding:8px 26px 8px 10px;}
+.fwrap{position:relative;display:flex;align-items:center;}
+.fwrap svg{position:absolute;left:9px;width:14px;height:14px;stroke:var(--tx2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;transition:stroke .15s;}
+.fwrap select{width:100%;padding-left:29px !important;}
+.fwrap.on svg{stroke:var(--gr);}
+.fwrap.on select{border-color:var(--gr);color:var(--grd);font-weight:600;background-color:#F2FBF7;}
 #btn-limpiar{grid-column:1/3;display:none;font-size:0.74rem;padding:7px;background:var(--bg2);border:0.5px solid var(--bd2);border-radius:var(--rmd);color:var(--tx2);cursor:pointer;font-weight:600;}
 
 /* TOTALES */
@@ -214,13 +219,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <!-- ═══════════ INVENTARIO ═══════════ -->
   <div id="sec-inv" class="section active">
     <div class="filtros">
-      <select id="f-eq" onchange="renderInv()"></select>
-      <select id="f-ta" onchange="renderInv()"></select>
-      <select id="f-cat" onchange="renderInv()"></select>
-      <select id="f-col" onchange="renderInv()"></select>
-      <select id="f-ver" onchange="renderInv()"></select>
-      <select id="f-dor" onchange="renderInv()"></select>
-      <select id="f-año" onchange="renderInv()"></select>
+      <span class="fwrap" id="fw-eq"><svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 4-3 7.5-7 10-4-2.5-7-6-7-10V6l7-4z"/></svg><select id="f-eq" onchange="renderInv()"></select></span>
+      <span class="fwrap" id="fw-ver"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 5.9 6.6.9-4.8 4.6 1.2 6.5-5.9-3.1-5.9 3.1 1.2-6.5L2.5 9.3l6.6-.9L12 2.5z"/></svg><select id="f-ver" onchange="renderInv()"></select></span>
+      <span class="fwrap" id="fw-col"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18c1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5c0-4-4-7.2-9-7.2z"/><circle cx="7.5" cy="11" r="1.1" fill="currentColor" stroke="none"/><circle cx="10" cy="7.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="17.3" cy="11" r="1.1" fill="currentColor" stroke="none"/></svg><select id="f-col" onchange="renderInv()"></select></span>
+      <span class="fwrap" id="fw-cat"><svg viewBox="0 0 24 24"><circle cx="6.6" cy="4.3" r="1.9"/><path d="M4 21v-6H2.9l1.5-5.1a2.2 2.2 0 0 1 2.1-1.5h.2a2.2 2.2 0 0 1 2.1 1.5L10.3 15H9.2v6"/><line x1="12" y1="2.5" x2="12" y2="21.5" stroke-dasharray="2 2"/><circle cx="17.4" cy="4.3" r="1.9"/><path d="M17.4 8.4a2.2 2.2 0 0 0-2.1 1.5L13.7 16h1.9l.4 5h2.8l.4-5h1.9l-1.6-6.1a2.2 2.2 0 0 0-2.1-1.5z"/></svg><select id="f-cat" onchange="renderInv()"></select></span>
+      <span class="fwrap" id="fw-ta"><svg viewBox="0 0 24 24"><path d="M2.6 7.6l2.8-2.2 1.8 1.3 1.5-1.3 1.5 1.3 1.8-1.3 2.8 2.2-1.9 2v8.6H4.5v-8.6l-1.9-2z"/><path d="M13.9 11.3l2.1-1.7 1.4 1 1.1-1 1.1 1 1.4-1 2.1 1.7-1.5 1.5v6.7h-6.2v-6.7l-1.5-1.5z"/></svg><select id="f-ta" onchange="renderInv()"></select></span>
+      <span class="fwrap" id="fw-dor"><svg viewBox="0 0 24 24"><path d="M6 8.5L8 7v10"/><rect x="12.5" y="7" width="6" height="10" rx="3"/></svg><select id="f-dor" onchange="renderInv()"></select></span>
+      <span class="fwrap" id="fw-año"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg><select id="f-año" onchange="renderInv()"></select></span>
       <button id="btn-limpiar" onclick="limpiarFiltros()">✕ Limpiar filtros</button>
     </div>
     <div class="tot-bar" id="tot-bar">
@@ -678,6 +683,11 @@ function renderInv(){
   setSel('f-año',[...new Set(INV.map(function(c){return String(c.año);}).filter(Boolean))].sort().reverse(),'Todos los años');
   var hay=!!(fE||fT||fCat||fCol||fVer||fDor||fAño);
   document.getElementById('btn-limpiar').style.display=hay?'block':'none';
+  // Resaltar los filtros activos
+  [['fw-eq',fE],['fw-ta',fT],['fw-cat',fCat],['fw-col',fCol],['fw-ver',fVer],['fw-dor',fDor],['fw-año',fAño]].forEach(function(par){
+    var el=document.getElementById(par[0]);
+    if(el)el.classList.toggle('on',!!par[1]);
+  });
 
   var lista=INV.filter(function(c){
     if(fE&&c.eq!==fE)return false;if(fT&&c.tal!==fT)return false;if(fCat&&getCat(c)!==fCat)return false;
