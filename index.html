@@ -290,6 +290,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <option value="cambio">Cambios</option>
           <option value="correccion">Correcciones</option>
           <option value="cuarentena">Cuarentena</option>
+          <option value="reserva">Apartados</option>
           <option value="baja">Bajas definitivas</option>
           <option value="consignacion">Consignaciones</option>
           <option value="edicion">Ediciones</option>
@@ -304,6 +305,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <div class="card-title"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Cuarentena</div>
       <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Camisetas que no aparecieron al contar. No están en el stock, pero si las encontrás podés devolverlas al inventario desde acá.</div>
       <div id="cuar-lista"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M6 2h12v20l-6-4-6 4V2z"/></svg>Apartados (esperando pago)</div>
+      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Producto reservado para un cliente. Ya está descontado del stock (no se cuenta como disponible), pero todavía no es venta. Si paga, se registra la venta; si no, vuelve al stock.</div>
+      <div id="apart-lista"></div>
     </div>
 
     <div class="card">
@@ -410,6 +417,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <span style="font-size:1.05rem;font-weight:800;color:var(--grd);" id="cart-total-val"></span>
     </div>
     <button class="btn btn-gr" onclick="confirmarVenta()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Confirmar venta</button>
+    <button class="btn" onclick="apartarCarrito()" style="background:#FAEEDA;color:#8A5A00;border:0.5px solid #e0c48a;">📌 Apartar (esperando pago)</button>
     <button class="btn btn-red" onclick="vaciarCarrito()">Vaciar carrito</button>
     <button class="btn btn-outline" onclick="cerrarCarrito()">Seguir agregando</button>
   </div>
@@ -594,7 +602,7 @@ function showTab(t){
   if(t==='inv')renderInv();
   if(t==='nuevo')renderNuevoForm();
   if(t==='listas')renderListas();
-  if(t==='tools'){renderConsigLista();renderBitacora();actualizarOffCount();renderCuarentena();}
+  if(t==='tools'){renderConsigLista();renderBitacora();actualizarOffCount();renderCuarentena();renderApartados();}
   window.scrollTo(0,0);
 }
 
@@ -609,7 +617,7 @@ window.aplicarDatosFirebase=function(){
     renderInv();
     setTimeout(function(){abiertos.forEach(function(clave){var idc=_idByClave[clave];if(idc)abrirGest(idc,clave,true);});},60);
   }
-  else if(id==='sec-tools'){renderConsigLista();renderBitacora();actualizarOffCount();renderCuarentena();}
+  else if(id==='sec-tools'){renderConsigLista();renderBitacora();actualizarOffCount();renderCuarentena();renderApartados();}
   else if(id==='sec-listas')renderListas();
   renderCartBadge();
   mostrarToast();
@@ -677,6 +685,7 @@ function renderInv(){
     _idByClave[k]=cardId;_claveById[cardId]=k;
     var fotos=fotosDeModelo(k);
     var cuarM=cuarPorClave(k);
+    var aptM=apartPorClave(k);
     var principal=fotos.find(function(f){return f.principal;})||fotos[0];
     var lbl=(rep.eq+' | '+rep.dor).replace(/'/g,"\\'");
     var borde=bordeClass(rep);
@@ -696,9 +705,10 @@ function renderInv(){
     var filasLect=vs.map(function(v){
       var idx=INV.indexOf(v),ag=(parseInt(v.stk)||0)===0;
       var cq=cuarM.porTalla[v.tal]||0;
+      var aq=aptM.porTalla[v.tal]||0;
       return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--bd);'+(ag&&!cq?'opacity:0.5;':'')+'">'+
         '<span style="font-size:0.88rem;font-weight:700;color:var(--tx);min-width:38px;">'+v.tal+(v.soloTienda?' <span style="font-size:0.5rem;font-weight:800;color:#fff;background:#A32D2D;border-radius:4px;padding:1px 4px;">OFF</span>':'')+'</span>'+
-        '<span style="font-size:0.78rem;color:var(--tx2);flex:1;text-align:center;">'+v.ver+(cq?' <span style="font-size:0.58rem;font-weight:800;color:#fff;background:#C47F2B;border-radius:4px;padding:1px 5px;white-space:nowrap;" title="En cuarentena">🔍 '+cq+'</span>':'')+'</span>'+
+        '<span style="font-size:0.78rem;color:var(--tx2);flex:1;text-align:center;">'+v.ver+(cq?' <span style="font-size:0.58rem;font-weight:800;color:#fff;background:#C47F2B;border-radius:4px;padding:1px 5px;white-space:nowrap;" title="En cuarentena">🔍 '+cq+'</span>':'')+(aq?' <span style="font-size:0.58rem;font-weight:800;color:#fff;background:#8A5A00;border-radius:4px;padding:1px 5px;white-space:nowrap;" title="Apartado, esperando pago">📌 '+aq+'</span>':'')+'</span>'+
         '<span style="display:flex;flex-direction:column;align-items:flex-end;min-width:58px;line-height:1.1;">'+
           '<span style="font-size:1rem;font-weight:700;color:'+(ag?'#A32D2D':'#0F6E56')+';">'+(ag?'Agotado':v.stk)+'</span>'+
           '<span class="cartprev" data-cp="'+v.id+'" style="font-size:0.6rem;font-weight:700;margin-top:1px;display:none;white-space:nowrap;"></span>'+
@@ -761,6 +771,7 @@ function renderInv(){
       '<div class="inv-top"><div><div class="inv-name">'+rep.eq+'</div><div class="inv-sub">'+rep.dor+'</div></div><span class="tag">'+sw(rep.col)+rep.col+'</span></div>'+
       '<div class="tags"><span class="tag">'+rep.año+'</span>'+extTags+'</div>'+
       (cuarM.total?'<div style="font-size:0.64rem;font-weight:700;color:#8A5A00;background:#FAEEDA;border-radius:6px;padding:5px 8px;margin-bottom:6px;">🔍 '+cuarM.total+' uds. en cuarentena (no aparecieron) · revisá en Tools</div>':'')+
+      (aptM.total?'<div style="font-size:0.64rem;font-weight:700;color:#fff;background:#8A5A00;border-radius:6px;padding:5px 8px;margin-bottom:6px;">📌 '+aptM.total+' uds. apartadas (esperando pago) · revisá en Tools</div>':'')+
       '<div class="tal-head"><span>Talla</span><span>Versión</span><span>Stock</span></div>'+
       '<div id="lect-'+cardId+'">'+filasLect+'</div>'+
       gestHtml+
@@ -1625,8 +1636,8 @@ function renderBitacora(){
   });
   var cont=document.getElementById('bit-lista');
   if(!lista.length){cont.innerHTML='<div style="font-size:0.75rem;color:var(--tx2);text-align:center;padding:14px;">Sin movimientos.</div>';return;}
-  var colores={ingreso:'#0F6E56',mod_suma:'#0E7C86',salida:'#A32D2D',devolucion:'#b03a6e',cambio:'#1a6fa0',correccion:'#8A6A2B',cuarentena:'#C47F2B',baja:'#A32D2D',consignacion:'#7B4F2E',edicion:'#666',eliminacion:'#A32D2D'};
-  var etiquetas={ingreso:'PRODUCTO NUEVO',mod_suma:'AUMENTO STOCK',salida:'VENTA',devolucion:'DEVOLUCIÓN',cambio:'CAMBIO',correccion:'CORRECCIÓN',cuarentena:'CUARENTENA',baja:'BAJA DEFINITIVA',consignacion:'CONSIGNACIÓN',edicion:'EDICIÓN',eliminacion:'ELIMINACIÓN'};
+  var colores={ingreso:'#0F6E56',mod_suma:'#0E7C86',salida:'#A32D2D',devolucion:'#b03a6e',cambio:'#1a6fa0',correccion:'#8A6A2B',cuarentena:'#C47F2B',reserva:'#8A5A00',baja:'#A32D2D',consignacion:'#7B4F2E',edicion:'#666',eliminacion:'#A32D2D'};
+  var etiquetas={ingreso:'PRODUCTO NUEVO',mod_suma:'AUMENTO STOCK',salida:'VENTA',devolucion:'DEVOLUCIÓN',cambio:'CAMBIO',correccion:'CORRECCIÓN',cuarentena:'CUARENTENA',reserva:'APARTADO',baja:'BAJA DEFINITIVA',consignacion:'CONSIGNACIÓN',edicion:'EDICIÓN',eliminacion:'ELIMINACIÓN'};
   cont.innerHTML=lista.slice(0,500).map(function(b){
     var tl=String(b.tipo).toLowerCase();
     var col=colores[tl]||'#666';
@@ -1661,6 +1672,121 @@ function eliminarBit(id){
   save();
   renderBitacora();
   toast2('✓ Movimiento borrado de la bitácora');
+}
+
+// ═══════════════ APARTADOS (reservas) ═══════════════
+function apartarCarrito(){
+  if(!_carrito.length){alert('El carrito está vacío.');return;}
+  var totU=_carrito.reduce(function(s,x){return s+x.qty;},0);
+  var listado=_carrito.map(function(it){return '• '+it.eq+' '+it.dor+' T:'+it.tal+' ×'+it.qty;}).join('\n');
+  var cliente=prompt('APARTAR (esperando pago)\n\n'+listado+'\n\nTotal: '+totU+' uds.\nSe descuenta del stock pero NO se registra como venta.\n\n¿Para quién es? (opcional)','');
+  if(cliente===null)return;
+  cliente=(cliente||'').trim();
+  var fecha=new Date().toLocaleDateString('es-HN');
+  var items=[];
+  _carrito.forEach(function(it){
+    var c=INV.find(function(x){return x.id===it.id;});
+    if(!c)return;
+    c.stk=(parseInt(c.stk)||0)-it.qty;if(c.stk<0)c.stk=0;
+    items.push({invId:c.id,eq:c.eq,dor:c.dor,tal:c.tal,ver:c.ver,col:c.col,'año':c['año'],
+      extras:JSON.parse(JSON.stringify(c.extras||{})),qty:it.qty});
+  });
+  if(!items.length){alert('No se pudo apartar.');return;}
+  var desc=cliente?('Apartado para '+cliente):('Apartado ('+items.length+' producto'+(items.length!==1?'s':'')+')');
+  logBit('reserva',desc,'📌 Apartado · '+totU+' uds. (esperando pago)');
+  BITACORA[0].resv={estado:'activa',cliente:cliente,items:items,fecha:fecha};
+  _carrito=[];_cartOpen={};
+  save();renderCartBadge();cerrarCarrito();renderInv();
+  toast2('📌 Apartado: '+totU+' uds.'+(cliente?(' · '+cliente):''));
+}
+function itemsApartados(){
+  return BITACORA.filter(function(b){return b.resv&&b.resv.estado==='activa'&&b.resv.items&&b.resv.items.length;});
+}
+function apartPorClave(clave){
+  var out={},tot=0;
+  itemsApartados().forEach(function(b){
+    b.resv.items.forEach(function(it){
+      var k=claveModelo({eq:it.eq,col:it.col,dor:it.dor,ver:it.ver,'año':it['año'],extras:it.extras});
+      if(k===clave){out[it.tal]=(out[it.tal]||0)+(it.qty||0);tot+=(it.qty||0);}
+    });
+  });
+  return {porTalla:out,total:tot};
+}
+function renderApartados(){
+  var cont=document.getElementById('apart-lista');if(!cont)return;
+  var lista=itemsApartados();
+  if(!lista.length){
+    cont.innerHTML='<div style="font-size:0.78rem;color:var(--tx2);text-align:center;padding:12px;">No hay nada apartado.</div>';
+    return;
+  }
+  var totU=lista.reduce(function(s,b){return s+b.resv.items.reduce(function(a,i){return a+(i.qty||0);},0);},0);
+  cont.innerHTML='<div style="font-size:0.7rem;font-weight:700;color:#8A5A00;background:#FAEEDA;border-radius:7px;padding:7px 10px;margin-bottom:8px;">'+lista.length+' apartado(s) · '+totU+' uds. esperando pago</div>'+
+  lista.map(function(b){
+    var r=b.resv;
+    var tot=r.items.reduce(function(a,i){return a+(i.qty||0);},0);
+    var filas=r.items.map(function(it){
+      var fotos=fotosDeModelo(claveModelo({eq:it.eq,col:it.col,dor:it.dor,ver:it.ver,'año':it['año'],extras:it.extras}));
+      var p=fotos.find(function(f){return f.principal;})||fotos[0];
+      var thumb=p?'<img src="'+p.url+'" onerror="this.style.opacity=0.25" style="width:36px;height:36px;border-radius:6px;object-fit:cover;object-position:'+fotoObjPos(p)+';flex-shrink:0;">'
+                 :'<div style="width:36px;height:36px;border-radius:6px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">👕</div>';
+      var ext='';if(it.extras)Object.keys(it.extras).forEach(function(k){if(it.extras[k])ext+=' · '+it.extras[k];});
+      return '<div style="display:flex;gap:7px;align-items:center;padding:4px 0;">'+thumb+
+        '<div style="flex:1;min-width:0;font-size:0.7rem;line-height:1.3;"><strong>'+it.eq+' '+it.dor+'</strong> · T:'+it.tal+' <span style="color:var(--grd);font-weight:700;">×'+it.qty+'</span>'+
+        '<br><span style="color:var(--tx2);font-size:0.62rem;">'+it.ver+' · '+it.col+ext+'</span></div>'+
+      '</div>';
+    }).join('');
+    return '<div style="border:0.5px solid var(--bd);border-radius:9px;padding:10px;margin-bottom:8px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'+
+        '<span style="font-size:0.82rem;font-weight:700;">'+(r.cliente?r.cliente:'Sin nombre')+'</span>'+
+        '<span style="font-size:0.66rem;color:var(--tx2);">'+r.fecha+' · '+tot+' uds.</span>'+
+      '</div>'+
+      filas+
+      '<div style="display:flex;gap:6px;margin-top:9px;">'+
+        '<button onclick="apartadoPago(\''+esc(String(b.id))+'\')" style="flex:2;padding:8px;border:none;border-radius:7px;background:var(--gr);color:#fff;font-size:0.72rem;font-weight:700;cursor:pointer;touch-action:manipulation;">✓ Pagó — registrar venta</button>'+
+        '<button onclick="apartadoCancelar(\''+esc(String(b.id))+'\')" style="flex:1;padding:8px;border:0.5px solid #f0b5b5;border-radius:7px;background:#FCEBEB;color:#A32D2D;font-size:0.72rem;font-weight:700;cursor:pointer;touch-action:manipulation;">✕ No pagó</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function apartadoPago(bitId){
+  var b=BITACORA.find(function(x){return String(x.id)===String(bitId);});
+  if(!b||!b.resv)return;
+  var r=b.resv;
+  var tot=r.items.reduce(function(a,i){return a+(i.qty||0);},0);
+  if(!confirm('¿Confirmar que PAGÓ?\n\n'+(r.cliente?r.cliente+'\n':'')+r.items.map(function(i){return '• '+i.eq+' '+i.dor+' T:'+i.tal+' ×'+i.qty;}).join('\n')+'\n\nTotal: '+tot+' uds.\nSe registrará como venta (el stock ya fue descontado al apartar).'))return;
+  var fecha=new Date().toLocaleDateString('es-HN');
+  r.items.forEach(function(it){
+    // El stock YA se descontó al apartar: solo registramos la venta
+    SAL.unshift({salId:'sal_'+Date.now()+'_'+Math.floor(Math.random()*99999),invId:it.invId,
+      eq:it.eq,dor:it.dor,tal:it.tal,ver:it.ver,'año':it['año'],col:it.col,
+      extras:it.extras||{},qty:it.qty,fecha:fecha});
+    var ext='';if(it.extras)Object.keys(it.extras).forEach(function(k){if(it.extras[k])ext+=' · '+it.extras[k];});
+    logBit('salida',it.eq+' | '+it.dor+' | T:'+it.tal+' | '+it.ver+' | '+it.col+ext,'Venta de apartado'+(r.cliente?(' ('+r.cliente+')'):'')+' · ×'+it.qty+' uds.');
+  });
+  r.estado='pagado';
+  save();renderApartados();renderInv();renderBitacora();
+  toast2('✓ Venta registrada: '+tot+' uds.');
+}
+function apartadoCancelar(bitId){
+  var b=BITACORA.find(function(x){return String(x.id)===String(bitId);});
+  if(!b||!b.resv)return;
+  var r=b.resv;
+  var tot=r.items.reduce(function(a,i){return a+(i.qty||0);},0);
+  if(!confirm('¿NO pagó?\n\n'+(r.cliente?r.cliente+'\n':'')+'Se devolverán '+tot+' uds. al stock y el apartado se cancela.'))return;
+  r.items.forEach(function(it){
+    var c=INV.find(function(x){return String(x.id)===String(it.invId);})||
+          INV.find(function(x){return x.eq===it.eq&&String(x.tal)===String(it.tal)&&x.ver===it.ver&&x.col===it.col&&String(x.dor||'')===String(it.dor||'')&&String(x['año'])===String(it['año'])&&extrasIguales(x.extras,it.extras);});
+    if(c){c.stk=(parseInt(c.stk)||0)+it.qty;}
+    else{
+      INV.push({eq:it.eq,dor:it.dor,col:it.col,ver:it.ver,'año':it['año'],tal:it.tal,stk:it.qty,
+        id:Date.now()+Math.floor(Math.random()*1000),extras:JSON.parse(JSON.stringify(it.extras||{})),
+        fotos:[],soloTienda:false,fechaIngreso:new Date().toLocaleDateString('es-HN')});
+    }
+  });
+  logBit('reserva',(r.cliente?('Apartado cancelado: '+r.cliente):'Apartado cancelado'),'✕ No pagó · '+tot+' uds. devueltas al stock');
+  r.estado='cancelado';
+  save();renderApartados();renderInv();renderBitacora();
+  toast2('✓ '+tot+' uds. devueltas al stock');
 }
 
 // ═══════════════ CUARENTENA ═══════════════
