@@ -278,9 +278,36 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   <!-- ═══════════ TOOLS ═══════════ -->
   <div id="sec-tools" class="section">
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>Bitácora de movimientos</div>
-      <div class="filtros" style="grid-template-columns:1fr 1fr;">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool0')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><path d="M6 2h12v20l-6-4-6 4V2z"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Apartados (esperando pago)</span>
+        <span id="tarrow-tool0" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool0" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Producto reservado para un cliente. Ya está descontado del stock (no se cuenta como disponible), pero todavía no es venta. Si paga, se registra la venta; si no, vuelve al stock.</div>
+      <div id="apart-lista"></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool1')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Cuarentena</span>
+        <span id="tarrow-tool1" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool1" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Camisetas que no aparecieron al contar. No están en el stock, pero si las encontrás podés devolverlas al inventario desde acá.</div>
+      <div id="cuar-lista"></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool2')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Bitácora de movimientos</span>
+        <span id="tarrow-tool2" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool2" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div class="filtros" style="grid-template-columns:1fr 1fr;">
         <select id="bit-f-tipo" onchange="renderBitacora()">
           <option value="">Todos los tipos</option>
           <option value="ingreso">Ingresos (producto nuevo)</option>
@@ -299,30 +326,66 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <select id="bit-f-eq" onchange="renderBitacora()"><option value="">Todos los equipos</option></select>
       </div>
       <div id="bit-lista" style="max-height:360px;overflow-y:auto;"></div>
+      </div>
     </div>
-
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Cuarentena</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Camisetas que no aparecieron al contar. No están en el stock, pero si las encontrás podés devolverlas al inventario desde acá.</div>
-      <div id="cuar-lista"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M6 2h12v20l-6-4-6 4V2z"/></svg>Apartados (esperando pago)</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Producto reservado para un cliente. Ya está descontado del stock (no se cuenta como disponible), pero todavía no es venta. Si paga, se registra la venta; si no, vuelve al stock.</div>
-      <div id="apart-lista"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg>Consignación</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Entregá producto a una persona (descuenta stock). Al liquidar, lo vendido se registra y lo no vendido vuelve al stock.</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool3')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Consignación</span>
+        <span id="tarrow-tool3" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool3" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Entregá producto a una persona (descuenta stock). Al liquidar, lo vendido se registra y lo no vendido vuelve al stock.</div>
       <button class="btn btn-gr" onclick="abrirNuevaConsig()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva consignación</button>
       <div id="consig-lista"></div>
+      </div>
     </div>
-
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/></svg>Respaldo (backup)</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Descargá una copia completa de todo (inventario, ventas, cambios, listas, bitácora, consignaciones). El archivo sirve también para la app original: mismo formato.</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool4')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Correcciones de conteo físico</span>
+        <span id="tarrow-tool4" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool4" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Importá el archivo <strong>.json</strong> que genera tu herramienta de conteo. Primero vas a <strong>revisar</strong> los cambios y nada se aplica hasta que confirmes.</div>
+      <label class="btn btn-outline" style="cursor:pointer;">
+        <svg viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><polyline points="12 12 12 21"/><polyline points="8 17 12 21 16 17"/></svg>Importar correcciones de conteo
+        <input type="file" id="file-correcciones" accept=".json,application/json" style="display:none;" onchange="importarCorrecciones(event)">
+      </label>
+      <div id="corr-msg" class="msg"></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool5')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Limpiar duplicados</span>
+        <span id="tarrow-tool5" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool5" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Junta tarjetas repetidas (mismo modelo y talla) en una sola, sumando su stock y borrando la copia. Vas a <strong>revisar</strong> antes de aplicar. Hacé un respaldo primero.</div>
+      <button class="btn btn-outline" onclick="buscarDuplicados()"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar duplicados</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool6')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Productos OFF LINE</span>
+        <span id="tarrow-tool6" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool6" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Exportá la lista de tallas marcadas como OFF LINE (ocultas del catálogo de clientes).</div>
+      <button class="btn btn-outline" onclick="exportarOffline()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar OFF LINE (.txt)</button>
+      <div id="off-count" style="font-size:0.72rem;color:var(--tx2);margin-top:8px;text-align:center;"></div>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tool-hdr" onclick="togTool('tool7')" style="display:flex;align-items:center;gap:8px;padding:14px 1.1rem;cursor:pointer;touch-action:manipulation;">
+        <span style="display:flex;align-items:center;color:var(--tx);"><svg viewBox="0 0 24 24"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/></svg></span>
+        <span style="flex:1;font-size:0.85rem;font-weight:700;color:var(--tx);">Respaldo (backup)</span>
+        <span id="tarrow-tool7" style="font-size:0.7rem;color:var(--tx2);transition:transform .2s;">▼</span>
+      </div>
+      <div id="tbody-tool7" style="display:none;padding:0 1.1rem 1.1rem;">
+        <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Descargá una copia completa de todo (inventario, ventas, cambios, listas, bitácora, consignaciones). El archivo sirve también para la app original: mismo formato.</div>
       <button class="btn btn-gr" onclick="exportarBackup()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar respaldo (.json)</button>
       <label class="btn btn-outline" style="cursor:pointer;">
         <svg viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><polyline points="12 12 12 21"/><polyline points="8 17 12 21 16 17"/></svg>Restaurar desde un respaldo
@@ -330,32 +393,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </label>
       <div id="backup-msg" class="msg"></div>
       <div style="font-size:0.64rem;color:#A32D2D;margin-top:8px;line-height:1.4;">⚠️ Restaurar <strong>reemplaza</strong> todos los datos actuales (en la nube y en todas tus apps). Usalo solo para recuperar de un respaldo.</div>
+      </div>
     </div>
-
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Correcciones de conteo físico</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Importá el archivo <strong>.json</strong> que genera tu herramienta de conteo. Primero vas a <strong>revisar</strong> los cambios y nada se aplica hasta que confirmes.</div>
-      <label class="btn btn-outline" style="cursor:pointer;">
-        <svg viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><polyline points="12 12 12 21"/><polyline points="8 17 12 21 16 17"/></svg>Importar correcciones de conteo
-        <input type="file" id="file-correcciones" accept=".json,application/json" style="display:none;" onchange="importarCorrecciones(event)">
-      </label>
-      <div id="corr-msg" class="msg"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>Limpiar duplicados</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Junta tarjetas repetidas (mismo modelo y talla) en una sola, sumando su stock y borrando la copia. Vas a <strong>revisar</strong> antes de aplicar. Hacé un respaldo primero.</div>
-      <button class="btn btn-outline" onclick="buscarDuplicados()"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar duplicados</button>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Productos OFF LINE</div>
-      <div style="font-size:0.72rem;color:var(--tx2);margin-bottom:10px;line-height:1.5;">Exportá la lista de tallas marcadas como OFF LINE (ocultas del catálogo de clientes).</div>
-      <button class="btn btn-outline" onclick="exportarOffline()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar OFF LINE (.txt)</button>
-      <div id="off-count" style="font-size:0.72rem;color:var(--tx2);margin-top:8px;text-align:center;"></div>
-    </div>
-  </div>
-
+  </div><!-- /sec-tools -->
 </div><!-- /wrap -->
 
 <!-- FAB carrito -->
@@ -594,6 +634,13 @@ function fotosDeModelo(clave){
 }
 
 // ═══════════════ NAV TABS ═══════════════
+function togTool(k){
+  var b=document.getElementById('tbody-'+k),a=document.getElementById('tarrow-'+k);
+  if(!b)return;
+  var abierto=b.style.display!=='none';
+  b.style.display=abierto?'none':'block';
+  if(a)a.style.transform=abierto?'rotate(0deg)':'rotate(180deg)';
+}
 function showTab(t){
   ['inv','nuevo','listas','tools'].forEach(function(x){
     document.getElementById('sec-'+x).classList.toggle('active',x===t);
