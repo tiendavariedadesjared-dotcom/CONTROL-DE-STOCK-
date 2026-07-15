@@ -392,6 +392,31 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <!-- Modal entrada de producto -->
 <!-- Modal subir stock (botón +) -->
+<!-- Modal revisión de correcciones de conteo -->
+<div id="mod-correcciones" class="overlay">
+  <div class="panel">
+    <div class="p-title">📋 Revisión de correcciones</div>
+    <div class="p-sub" id="corr-rev-sub">Revisá los cambios antes de aplicar. No se guarda nada hasta que confirmes.</div>
+    <div id="corr-totales" style="margin-bottom:12px;"></div>
+    <div id="corr-tabla" style="margin-bottom:10px;"></div>
+    <div id="corr-noenc" style="margin-bottom:10px;"></div>
+    <button class="btn btn-gr" onclick="aplicarCorrecciones()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Aplicar correcciones</button>
+    <button class="btn btn-outline" onclick="cerrarCorrecciones()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal revisión de duplicados -->
+<div id="mod-duplicados" class="overlay">
+  <div class="panel">
+    <div class="p-title">🧹 Juntar duplicados</div>
+    <div class="p-sub" id="dup-sub">Revisá antes de aplicar. Nada se guarda hasta que confirmes.</div>
+    <div style="font-size:0.64rem;color:#854F0B;background:#FAEEDA;border-radius:7px;padding:7px 10px;margin-bottom:10px;line-height:1.4;">Se conserva la tarjeta con foto/stock y se suma el stock de las copias. El stock total no cambia. Conviene tener un respaldo hecho.</div>
+    <div id="dup-tabla" style="margin-bottom:10px;"></div>
+    <button class="btn btn-gr" id="dup-aplicar" onclick="aplicarJuntarDuplicados()"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Juntar duplicados</button>
+    <button class="btn btn-outline" onclick="cerrarDuplicados()">Cancelar</button>
+  </div>
+</div>
+
 <div id="mod-subir" class="overlay">
   <div class="panel">
     <div class="p-title">➕ Subir stock</div>
@@ -1169,13 +1194,6 @@ function confirmarIngresoInline(cardId,clave){
   setTimeout(function(){abiertos.forEach(function(cl){var idc=_idByClave[cl];if(idc)abrirGest(idc,cl);});},50);
   toast2('✓ Ingreso registrado: +'+totalAdd+' uds.');
 }
-function renderMotivos(){
-  document.getElementById('entrada-motivos').innerHTML=MOTIVOS.map(function(m){
-    var sel=m.id===_entradaMotivo;
-    return '<button onclick="setMotivo(\''+m.id+'\')" style="padding:10px 6px;border-radius:8px;border:1.5px solid '+(sel?m.col:'var(--bd2)')+';background:'+(sel?m.col:'var(--bg2)')+';color:'+(sel?'#fff':'var(--tx)')+';font-size:0.74rem;font-weight:700;cursor:pointer;touch-action:manipulation;">'+m.lbl+'</button>';
-  }).join('');
-}
-function setMotivo(id){_entradaMotivo=id;renderMotivos();}
 function labelMotivo(id){var m=MOTIVOS.find(function(x){return x.id===id;});return m?m.lbl.replace(/^\S+\s/,''):id;}
 function registrarMovTalla(motivo,v,q,antes){
   var ext='';if(v.extras)Object.keys(v.extras).forEach(function(k){if(v.extras[k])ext+=' · '+v.extras[k];});
